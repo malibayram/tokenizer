@@ -13,28 +13,11 @@ class SemanticTokenizer:
     for word in words:
       # check if capitalized
       if word[0].isupper():
-        token_ids.append("<upper>")
+        token_ids.append(0)
         word = word.lower()
-      if "ler" or "lar" in word:
-        subwords = word.split("ler")
-        subwords = word.split("lar")
-        token_ids.append(self.tokenizer.encode(subwords[0]))
-        token_ids.append("<plural>")
-        token_ids.append(self.tokenizer.encode(subwords[1]))
-      else:
-        token_ids.append(self.tokenizer.encode(word))
-    return token_ids
+      
+      token_ids += self.tokenizer.encode(word)
+    return self.tokenizer.encode(text)
   
   def decode(self, token_ids: list):
-    tokens = []
-    for token_id in token_ids:
-      tokens.append(self.tokenizer.decode(token_id))
-      for i, token in enumerate(tokens):
-        if token == "<upper>":
-          tokens[i+1] = tokens[i+1].capitalize()
-          tokens.pop(i)
-        if token == "<plural>":
-          tokens[i-1] += "ler"
-          tokens.pop(i)
-    output = " ".join(tokens)
-    return output
+    return self.tokenizer.decode(token_ids)
