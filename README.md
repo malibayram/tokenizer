@@ -16,6 +16,28 @@ Bu projenin amacı, metin analizi ve doğal dil işleme (NLP) süreçlerinde kul
 - Genişletilebilir mimari
 - Yüksek performanslı işleme
 
+## Mevcut Implementasyonlar
+
+### Türkçe Morfolojik Tokenizer (Rust)
+
+`turkish_tokenizer` dizininde Rust ile geliştirilmiş, Türkçe morfolojik analiz yapabilen bir tokenizer bulunmaktadır. Bu tokenizer:
+
+- Kök kelime ve ek tespiti
+- Büyük harf hassasiyeti
+- Türkçe karakter desteği
+- BPE (Byte-Pair Encoding) yedekleme sistemi
+
+gibi özelliklere sahiptir.
+
+Detaylı bilgi ve kullanım kılavuzu için: [Turkish Tokenizer Documentation](turkish_tokenizer/README.md)
+
+Örnek kullanım:
+```bash
+cd turkish_tokenizer
+cargo build --release
+./target/release/turkish_tokenizer "Kitabı ve defterleri getirn, YouTube"
+```
+
 ## Geliştirme ve Katkıda Bulunma
 
 Projeye katkıda bulunmak için:

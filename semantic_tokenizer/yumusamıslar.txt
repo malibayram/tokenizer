@@ -1,4 +1,4 @@
-dd = """et ed
+et ed
 çok çoğ
 yap yab
 gerek gereğ
@@ -2232,4 +2232,4 @@ masset massed
 munsap munsab
 tatarcık tatarcığ
 guslet gusled
-incinmek incinmeğ"""
+incinmek incinmeğ
