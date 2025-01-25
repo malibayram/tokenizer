@@ -76,14 +76,13 @@ impl TurkishTokenizer {
             return Some((word.to_string(), id));
         }
 
-        // Try trimming from the end
-        let mut current = word.to_string();
-        while current.len() > 1 {
-            if let Some(last_char_boundary) = current.char_indices().last().map(|(i, _)| i) {
-                current.truncate(last_char_boundary);
-                if let Some(&id) = self.roots.get(&current) {
-                    return Some((current, id));
-                }
+        // Try trimming from the end, respecting UTF-8 boundaries
+        let mut chars: Vec<char> = word.chars().collect();
+        while chars.len() > 1 {
+            chars.pop(); // Remove last character
+            let current = chars.iter().collect::<String>();
+            if let Some(&id) = self.roots.get(&current) {
+                return Some((current, id));
             }
         }
 
@@ -92,15 +91,16 @@ impl TurkishTokenizer {
 
     fn match_suffix(&self, suffix: &str) -> Vec<(String, u32)> {
         let mut result = Vec::new();
-        let mut remaining = suffix.to_string();
+        let chars: Vec<char> = suffix.chars().collect();
+        let mut start = 0;
 
-        while !remaining.is_empty() {
+        while start < chars.len() {
             let mut found = false;
-            for i in (1..=remaining.len()).rev() {
-                let substr = &remaining[..i];
-                if let Some(&id) = self.suffixes.get(substr) {
-                    result.push((substr.to_string(), id));
-                    remaining = remaining[i..].to_string();
+            for end in (start + 1..=chars.len()).rev() {
+                let substr: String = chars[start..end].iter().collect();
+                if let Some(&id) = self.suffixes.get(&substr) {
+                    result.push((substr, id));
+                    start = end;
                     found = true;
                     break;
                 }
@@ -110,8 +110,9 @@ impl TurkishTokenizer {
             }
         }
 
-        if !remaining.is_empty() {
+        if start < chars.len() {
             // If there are remaining characters, use BPE
+            let remaining: String = chars[start..].iter().collect();
             let bpe_tokens = self.match_bpe(&remaining);
             result.extend(bpe_tokens);
         }
@@ -121,27 +122,27 @@ impl TurkishTokenizer {
 
     fn match_bpe(&self, word: &str) -> Vec<(String, u32)> {
         let mut result = Vec::new();
-        let mut remaining = word.to_string();
+        let chars: Vec<char> = word.chars().collect();
+        let mut start = 0;
 
-        while !remaining.is_empty() {
+        while start < chars.len() {
             let mut found = false;
-            for i in (1..=remaining.len()).rev() {
-                let substr = &remaining[..i];
-                if let Some(&id) = self.bpe_tokens.get(substr) {
-                    result.push((substr.to_string(), id));
-                    remaining = remaining[i..].to_string();
+            for end in (start + 1..=chars.len()).rev() {
+                let substr: String = chars[start..end].iter().collect();
+                if let Some(&id) = self.bpe_tokens.get(&substr) {
+                    result.push((substr, id));
+                    start = end;
                     found = true;
                     break;
                 }
             }
             if !found {
                 // If no match found, take the first character as a token
-                let c = remaining.chars().next().unwrap().to_string();
-                let c_len = c.len();
+                let c: String = chars[start..start + 1].iter().collect();
                 if let Some(&id) = self.bpe_tokens.get(&c) {
-                    result.push((c.clone(), id));
+                    result.push((c, id));
                 }
-                remaining = remaining[c_len..].to_string();
+                start += 1;
             }
         }
         result
