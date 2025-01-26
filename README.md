@@ -3,10 +3,10 @@
 Dilbilim kurallarını temel alarak, çok dilli metinleri işlemek ve anlam bütünlüğünü korumak için gelişmiş bir tokenizer altyapısı.
 
 ## İlk Versiyon
-- [ ] Kelime köklerinin ses olayına uğramış olan hallerinin ses olayına uğramamış olan halleri ile aynı id ile temsil edilmesi
-- [ ] İlkHarfBüyük tokeni oluşturulması ve tüm tokenlerin ilk harfinin küçük harfe çevrilmesi
-- [ ] Çoğul tokeni oluşturulması ve ler - lar eklerinin silinmesi
-- [ ] Tamamen aynı olan ama sesleri farklı olan eklerin özel tokenler ile temsil edilmesi
+- [x] Kelime köklerinin ses olayına uğramış olan hallerinin ses olayına uğramamış olan halleri ile aynı id ile temsil edilmesi
+- [x] İlkHarfBüyük tokeni oluşturulması ve tüm tokenlerin ilk harfinin küçük harfe çevrilmesi
+- [x] Çoğul tokeni oluşturulması ve ler - lar eklerinin silinmesi
+- [x] Tamamen aynı olan ama sesleri farklı olan eklerin özel tokenler ile temsil edilmesi
 
 ---
 
@@ -21,28 +21,93 @@ Bu projenin amacı, metin analizi ve doğal dil işleme (NLP) süreçlerinde kul
 - Çok dilli destek altyapısı
 - Genişletilebilir mimari
 - Yüksek performanslı işleme
+- Paralel işleme desteği
 
 ## Mevcut Implementasyonlar
 
-### Türkçe Morfolojik Tokenizer (Rust)
+### Türkçe Morfolojik Tokenizer
 
-`turkish_tokenizer` dizininde Rust ile geliştirilmiş, Türkçe morfolojik analiz yapabilen bir tokenizer bulunmaktadır. Bu tokenizer:
+`turkish_tokenizer` dizininde Python ve Rust ile geliştirilmiş, Türkçe morfolojik analiz yapabilen tokenizer'lar bulunmaktadır. Her iki implementasyon da aynı özelliklere sahiptir:
 
 - Kök kelime ve ek tespiti
 - Büyük harf hassasiyeti
 - Türkçe karakter desteği
 - BPE (Byte-Pair Encoding) yedekleme sistemi
 
-gibi özelliklere sahiptir.
+#### Python Implementasyonu
+```python
+from turkish_tokenizer import tokenize
 
-Detaylı bilgi ve kullanım kılavuzu için: [Turkish Tokenizer Documentation](turkish_tokenizer/README.md)
+text = "Kitabı ve defterleri getirn, YouTube"
+result = tokenize(text)
+print(result)
+```
 
-Örnek kullanım:
+#### Rust Implementasyonu
 ```bash
 cd turkish_tokenizer
 cargo build --release
 ./target/release/turkish_tokenizer "Kitabı ve defterleri getirn, YouTube"
 ```
+
+Her iki implementasyon da aynı çıktıyı üretir:
+```json
+{
+  "tokens": [
+    "<UPCL>",
+    "kitab",
+    "ı",
+    "ve",
+    "defter",
+    "ler",
+    "i",
+    "getir",
+    "n",
+    ",",
+    "<UPCL>",
+    "yo",
+    "u",
+    "<UPCL>",
+    "tu",
+    "be"
+  ],
+  "ids": [
+    0,
+    385,
+    19936,
+    19901,
+    2001,
+    19934,
+    19935,
+    159,
+    19950,
+    20022,
+    0,
+    643,
+    19937,
+    0,
+    21941,
+    21383
+  ]
+}
+```
+
+Detaylı bilgi ve kullanım kılavuzu için: [Turkish Tokenizer Documentation](turkish_tokenizer/README.md)
+
+### Implementasyon Farklılıkları
+
+1. **Performans**:
+   - Rust implementasyonu `rayon` ile paralel işleme yapabilir
+   - Rust versiyonu daha verimli bellek yönetimi sunar
+   - Python versiyonu daha basit ve değiştirmesi kolaydır
+
+2. **String İşleme**:
+   - Rust UTF-8 farkındalıklı string işlemleri kullanır
+   - Python doğal Unicode desteğine sahiptir
+
+3. **Bellek Kullanımı**:
+   - Rust sıfır maliyetli soyutlamalar kullanır
+   - Python referans sayımı ve çöp toplama kullanır
 
 ## Geliştirme ve Katkıda Bulunma
 
