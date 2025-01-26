@@ -1,7 +1,9 @@
+use rayon::prelude::*;
+use regex::Regex;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::BufReader;
-use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
 struct TokenizerOutput {
@@ -13,6 +15,7 @@ struct TurkishTokenizer {
     roots: HashMap<String, u32>,
     suffixes: HashMap<String, u32>,
     bpe_tokens: HashMap<String, u32>,
+    word_regex: Regex,
 }
 
 impl TurkishTokenizer {
@@ -20,11 +23,13 @@ impl TurkishTokenizer {
         let roots = Self::load_json("kokler_v04.json");
         let suffixes = Self::load_json("ekler_v04.json");
         let bpe_tokens = Self::load_json("bpe_v02.json");
+        let word_regex = Regex::new(r"[\w]+|[.,!?;]").unwrap();
 
         TurkishTokenizer {
             roots,
             suffixes,
             bpe_tokens,
+            word_regex,
         }
     }
 
@@ -34,199 +39,134 @@ impl TurkishTokenizer {
         serde_json::from_reader(reader).expect(&format!("Failed to parse {}", file_path))
     }
 
-    fn is_uppercase(c: char) -> bool {
-        c.is_uppercase()
-    }
-
-    fn split_by_uppercase(word: &str) -> Vec<(String, bool)> {
-        let mut result = Vec::new();
-        let mut current_part = String::new();
-        let mut is_first_char = true;
-        
-        for c in word.chars() {
-            if Self::is_uppercase(c) && !is_first_char {
-                if !current_part.is_empty() {
-                    result.push((current_part, false));
-                }
-                current_part = String::new();
-                current_part.push(c.to_lowercase().next().unwrap());
-                result.push((current_part.clone(), true));
-                current_part = String::new();
-            } else {
-                current_part.push(c.to_lowercase().next().unwrap());
-            }
-            is_first_char = false;
-        }
-        
-        if !current_part.is_empty() {
-            result.push((current_part, false));
-        }
-        
-        // Handle first character
-        if !result.is_empty() && Self::is_uppercase(word.chars().next().unwrap()) {
-            result[0].1 = true;
-        }
-        
-        result
-    }
-
-    fn match_root(&self, word: &str) -> Option<(String, u32)> {
-        // Try exact match first
-        if let Some(&id) = self.roots.get(word) {
-            return Some((word.to_string(), id));
-        }
-
-        // Try trimming from the end, respecting UTF-8 boundaries
-        let mut chars: Vec<char> = word.chars().collect();
-        while chars.len() > 1 {
-            chars.pop(); // Remove last character
-            let current = chars.iter().collect::<String>();
-            if let Some(&id) = self.roots.get(&current) {
-                return Some((current, id));
-            }
-        }
-
-        None
-    }
-
-    fn match_suffix(&self, suffix: &str) -> Vec<(String, u32)> {
-        let mut result = Vec::new();
-        let chars: Vec<char> = suffix.chars().collect();
-        let mut start = 0;
-
-        while start < chars.len() {
-            let mut found = false;
-            for end in (start + 1..=chars.len()).rev() {
-                let substr: String = chars[start..end].iter().collect();
-                if let Some(&id) = self.suffixes.get(&substr) {
-                    result.push((substr, id));
-                    start = end;
-                    found = true;
-                    break;
-                }
-            }
-            if !found {
-                break;
-            }
-        }
-
-        if start < chars.len() {
-            // If there are remaining characters, use BPE
-            let remaining: String = chars[start..].iter().collect();
-            let bpe_tokens = self.match_bpe(&remaining);
-            result.extend(bpe_tokens);
-        }
-
-        result
-    }
-
-    fn match_bpe(&self, word: &str) -> Vec<(String, u32)> {
-        let mut result = Vec::new();
-        let chars: Vec<char> = word.chars().collect();
-        let mut start = 0;
-
-        while start < chars.len() {
-            let mut found = false;
-            for end in (start + 1..=chars.len()).rev() {
-                let substr: String = chars[start..end].iter().collect();
-                if let Some(&id) = self.bpe_tokens.get(&substr) {
-                    result.push((substr, id));
-                    start = end;
-                    found = true;
-                    break;
-                }
-            }
-            if !found {
-                // If no match found, take the first character as a token
-                let c: String = chars[start..start + 1].iter().collect();
-                if let Some(&id) = self.bpe_tokens.get(&c) {
-                    result.push((c, id));
-                }
-                start += 1;
-            }
-        }
-        result
-    }
-
     fn tokenize(&self, text: &str) -> TokenizerOutput {
+        let words: Vec<_> = self.word_regex.find_iter(text).collect();
+        let tokens_and_ids: Vec<(Vec<String>, Vec<u32>)> = words
+            .par_iter() // Parallelize processing while maintaining order
+            .map(|word| self.process_word(word.as_str()))
+            .collect();
+
         let mut tokens = Vec::new();
         let mut ids = Vec::new();
 
-        for word in text.split_whitespace() {
-            let mut word_tokens = Vec::new();
-            let mut word_ids = Vec::new();
-
-            // Split by uppercase if necessary
-            let parts = if word.chars().any(Self::is_uppercase) {
-                let split_parts = Self::split_by_uppercase(word);
-                for (part, is_uppercase) in split_parts {
-                    if is_uppercase {
-                        word_tokens.push("<UPCL>".to_string());
-                        word_ids.push(self.roots.get("<UPCL>").copied().unwrap_or(0));
-                    }
-                    if !part.is_empty() {
-                        // Try to match as root
-                        if let Some((root, root_id)) = self.match_root(&part) {
-                            let root_len = root.len();
-                            word_tokens.push(root);
-                            word_ids.push(root_id);
-
-                            // Check for suffixes
-                            let remaining = &part[root_len..];
-                            if !remaining.is_empty() {
-                                let suffix_tokens = self.match_suffix(remaining);
-                                for (token, id) in suffix_tokens {
-                                    word_tokens.push(token);
-                                    word_ids.push(id);
-                                }
-                            }
-                        } else {
-                            // Use BPE as fallback
-                            let bpe_tokens = self.match_bpe(&part);
-                            for (token, id) in bpe_tokens {
-                                word_tokens.push(token);
-                                word_ids.push(id);
-                            }
-                        }
-                    }
-                }
-                Vec::new() // Parts are already processed
-            } else {
-                vec![word.to_string()]
-            };
-
-            // Process non-uppercase parts
-            for part in parts {
-                // Try to match as root
-                if let Some((root, root_id)) = self.match_root(&part) {
-                    let root_len = root.len();
-                    word_tokens.push(root);
-                    word_ids.push(root_id);
-
-                    // Check for suffixes
-                    let remaining = &part[root_len..];
-                    if !remaining.is_empty() {
-                        let suffix_tokens = self.match_suffix(remaining);
-                        for (token, id) in suffix_tokens {
-                            word_tokens.push(token);
-                            word_ids.push(id);
-                        }
-                    }
-                } else {
-                    // Use BPE as fallback
-                    let bpe_tokens = self.match_bpe(&part);
-                    for (token, id) in bpe_tokens {
-                        word_tokens.push(token);
-                        word_ids.push(id);
-                    }
-                }
-            }
-
-            tokens.extend(word_tokens);
-            ids.extend(word_ids);
+        for (token_list, id_list) in tokens_and_ids {
+            tokens.extend(token_list);
+            ids.extend(id_list);
         }
 
         TokenizerOutput { tokens, ids }
+    }
+
+    fn process_word(&self, word: &str) -> (Vec<String>, Vec<u32>) {
+        let mut tokens = Vec::new();
+        let mut ids = Vec::new();
+
+        if word.chars().any(char::is_uppercase) {
+            // Add initial UPCL token if word starts with uppercase
+            if word.chars().next().unwrap().is_uppercase() {
+                tokens.push("<UPCL>".to_string());
+                ids.push(*self.roots.get("<UPCL>").unwrap_or(&0));
+            }
+
+            // Split by uppercase letters and process each part
+            let mut current = String::new();
+            let mut is_first = true;
+
+            for c in word.chars() {
+                if c.is_uppercase() && !is_first {
+                    if !current.is_empty() {
+                        self.process_lowercase_word(&current.to_lowercase(), &mut tokens, &mut ids);
+                    }
+                    tokens.push("<UPCL>".to_string());
+                    ids.push(*self.roots.get("<UPCL>").unwrap_or(&0));
+                    current.clear();
+                    current.push(c);
+                } else {
+                    current.push(c);
+                }
+                is_first = false;
+            }
+
+            if !current.is_empty() {
+                self.process_lowercase_word(&current.to_lowercase(), &mut tokens, &mut ids);
+            }
+        } else {
+            self.process_lowercase_word(word, &mut tokens, &mut ids);
+        }
+
+        (tokens, ids)
+    }
+
+    fn process_lowercase_word(&self, word: &str, tokens: &mut Vec<String>, ids: &mut Vec<u32>) {
+        if let Some((root, root_id, remainder)) = self.match_root(word) {
+            tokens.push(root);
+            ids.push(root_id);
+            self.process_remainder(&remainder, tokens, ids);
+        } else {
+            self.process_bpe(word, tokens, ids);
+        }
+    }
+
+    fn match_root(&self, word: &str) -> Option<(String, u32, String)> {
+        let chars: Vec<char> = word.chars().collect();
+        for i in (1..=chars.len()).rev() {
+            let prefix: String = chars[..i].iter().collect();
+            if let Some(&id) = self.roots.get(&prefix) {
+                let remainder: String = chars[i..].iter().collect();
+                return Some((prefix, id, remainder));
+            }
+        }
+        None
+    }
+
+    fn process_remainder(&self, remainder: &str, tokens: &mut Vec<String>, ids: &mut Vec<u32>) {
+        if remainder.is_empty() {
+            return;
+        }
+
+        if let Some((suffix, suffix_id)) = self.match_suffix(remainder) {
+            tokens.push(suffix.clone());
+            ids.push(suffix_id);
+            let new_remainder = &remainder[suffix.len()..];
+            self.process_remainder(new_remainder, tokens, ids);
+        } else {
+            self.process_bpe(remainder, tokens, ids);
+        }
+    }
+
+    fn match_suffix(&self, word: &str) -> Option<(String, u32)> {
+        let chars: Vec<char> = word.chars().collect();
+        for i in (1..=chars.len()).rev() {
+            let current: String = chars[..i].iter().collect();
+            if let Some(&id) = self.suffixes.get(&current) {
+                return Some((current, id));
+            }
+        }
+        None
+    }
+
+    fn process_bpe(&self, word: &str, tokens: &mut Vec<String>, ids: &mut Vec<u32>) {
+        let chars: Vec<char> = word.chars().collect();
+        let mut i = 0;
+
+        while i < chars.len() {
+            let mut found = false;
+
+            for j in (i + 1..=chars.len()).rev() {
+                let substr: String = chars[i..j].iter().collect();
+                if let Some(&id) = self.bpe_tokens.get(&substr) {
+                    tokens.push(substr);
+                    ids.push(id);
+                    i = j;
+                    found = true;
+                    break;
+                }
+            }
+
+            if !found {
+                i += 1;
+            }
+        }
     }
 }
 
@@ -236,10 +176,10 @@ fn main() {
         eprintln!("Usage: {} <input_text>", args[0]);
         std::process::exit(1);
     }
-    
+
     let tokenizer = TurkishTokenizer::new();
-    let input = &args[1..].join(" "); // Join all arguments after program name
-    
-    let output = tokenizer.tokenize(input);
+    let input = args[1..].join(" ");
+    let output = tokenizer.tokenize(&input);
+
     println!("{}", serde_json::to_string_pretty(&output).unwrap());
 }

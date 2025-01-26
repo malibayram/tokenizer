@@ -1,6 +1,6 @@
 # Turkish Morphological Tokenizer
 
-A Rust-based morphological tokenizer for Turkish text that handles root words, suffixes, and special cases like uppercase letters and punctuation.
+A high-performance morphological tokenizer for Turkish text, available in both Python and Rust implementations. The tokenizer handles root words, suffixes, and special cases like uppercase letters and punctuation.
 
 ## Features
 
@@ -10,17 +10,32 @@ A Rust-based morphological tokenizer for Turkish text that handles root words, s
 - Byte-pair encoding (BPE) fallback for unknown tokens
 - Support for Turkish characters
 - JSON output format
+- Parallel processing support (Rust implementation)
+- Identical output format in both implementations
 
 ## Prerequisites
 
-- Rust (latest stable version)
+### For Python Implementation
+- Python 3.6+
 - Required dictionary files:
   - `kokler_v04.json`: Root words dictionary
   - `ekler_v04.json`: Suffixes dictionary
   - `bpe_v02.json`: BPE tokens dictionary
 
+### For Rust Implementation
+- Rust (latest stable version)
+- Required dependencies (specified in `Cargo.toml`):
+  - `serde` and `serde_json` for JSON handling
+  - `regex` for text processing
+  - `rayon` for parallel processing
+- Same dictionary files as Python implementation
+
 ## Installation
 
+### Python Implementation
+No installation needed. Just ensure you have the required JSON files in the same directory as the script.
+
+### Rust Implementation
 1. Clone the repository:
 ```bash
 git clone <repository-url>
@@ -36,9 +51,18 @@ The compiled binary will be available at `target/release/turkish_tokenizer`.
 
 ## Usage
 
-### Command Line
+### Python Implementation
 
-The tokenizer accepts input text as a command-line argument:
+```python
+from turkish_tokenizer import tokenize
+
+# Example usage
+text = "Kitabı ve defterleri getirn, YouTube"
+result = tokenize(text)
+print(result)
+```
+
+### Rust Implementation (Command Line)
 
 ```bash
 ./target/release/turkish_tokenizer "Kitabı ve defterleri getirn, YouTube"
@@ -57,7 +81,7 @@ For text with multiple words, you can either:
 
 ### Output Format
 
-The tokenizer outputs JSON with two arrays:
+Both implementations produce identical JSON output with two arrays:
 1. `tokens`: The tokenized strings
 2. `ids`: The corresponding token IDs
 
@@ -79,8 +103,7 @@ Example output:
     "yo",
     "u",
     "<UPCL>",
-    "t",
-    "u",
+    "tu",
     "be"
   ],
   "ids": [
@@ -98,8 +121,7 @@ Example output:
     643,
     19937,
     0,
-    20068,
-    20069,
+    21941,
     21383
   ]
 }
@@ -114,20 +136,43 @@ Example output:
 
 2. **Root Word Detection**:
    - Words are matched against the root dictionary
-   - If no exact match is found, the word is progressively shortened from the end
+   - The longest possible match is used
+   - Remaining characters are processed as suffixes or BPE tokens
 
 3. **Suffix Handling**:
    - After finding a root word, remaining characters are matched against the suffix dictionary
    - Multiple suffixes can be detected in sequence
+   - Longest possible match is used for each suffix
 
 4. **BPE Fallback**:
    - If a part cannot be matched as a root or suffix, it is tokenized using byte-pair encoding
    - BPE ensures that any unknown text can still be tokenized
 
+## Implementation Differences
+
+While both implementations produce identical output, they have some technical differences:
+
+1. **Performance**:
+   - Rust implementation uses parallel processing via `rayon`
+   - Rust version has more efficient memory management
+   - Python version is more straightforward and easier to modify
+
+2. **String Handling**:
+   - Rust uses UTF-8 aware string operations
+   - Python has native Unicode support
+
+3. **Memory Usage**:
+   - Rust implementation uses zero-cost abstractions
+   - Python uses reference counting and garbage collection
+
 ## Examples
 
 1. Simple word with suffix:
 ```bash
+# Python
+python3 turkish_tokenizer.py "kitabı"
+
+# Rust
 ./target/release/turkish_tokenizer "kitabı"
 ```
 Output:
@@ -138,25 +183,26 @@ Output:
 }
 ```
 
-2. Word with uppercase letters:
+2. Complex sentence with uppercase words:
 ```bash
-./target/release/turkish_tokenizer "YouTube"
+# Python/Rust
+"Bir maddenin yanması ile çıkan ve içinde katı zerrelerle buğu bulunan değişik renklerde gaz"
 ```
 Output:
 ```json
 {
-  "tokens": ["<UPCL>", "yo", "u", "<UPCL>", "t", "u", "be"],
-  "ids": [0, 643, 19937, 0, 20068, 20069, 21383]
+  "tokens": ["<UPCL>", "bir", "madde", "nin", "yan", "ma", "sı", "ile", "çık", "a", "n", "ve", "için", "de", "katı", "zerre", "ler", "le", "buğu", "bulun", "a", "n", "değişik", "renk", "ler", "de", "gaz"],
+  "ids": [0, 1, 175, 19946, 59, 19954, 19952, 19888, 422, 19940, 19950, 19901, 19886, 19943, 926, 5976, 19934, 19947, 13592, 13, 19940, 19950, 273, 564, 19934, 19943, 965]
 }
 ```
 
 ## Error Handling
 
-If you run the tokenizer without any input text, it will display a usage message:
-```bash
-./target/release/turkish_tokenizer
-Usage: ./target/release/turkish_tokenizer <input_text>
-```
+Both implementations provide appropriate error messages for:
+- Missing input text
+- Missing dictionary files
+- Invalid JSON in dictionary files
+- Invalid UTF-8 sequences
 
 ## License
 
