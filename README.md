@@ -7,6 +7,14 @@ Dilbilim kurallarını temel alarak, çok dilli metinleri işlemek ve anlam büt
 - [x] İlkHarfBüyük tokeni oluşturulması ve tüm tokenlerin ilk harfinin küçük harfe çevrilmesi
 - [x] Çoğul tokeni oluşturulması ve ler - lar eklerinin silinmesi
 - [x] Tamamen aynı olan ama sesleri farklı olan eklerin özel tokenler ile temsil edilmesi
+- [x] Boşluk, satır sonu ve tab karakterlerinin özel tokenler ile temsil edilmesi
+
+## Gelecek Özellikler
+- [ ] Çok dilli destek
+- [ ] Performans optimizasyonları
+- [ ] Daha kapsamlı test senaryoları
+- [ ] Web API desteği
+- [ ] Docker entegrasyonu
 
 ---
 
@@ -21,102 +29,172 @@ Bu projenin amacı, metin analizi ve doğal dil işleme (NLP) süreçlerinde kul
 - Çok dilli destek altyapısı
 - Genişletilebilir mimari
 - Yüksek performanslı işleme
-- Paralel işleme desteği
+- Özel karakter ve boşluk işleme desteği
 
-## Mevcut Implementasyonlar
+## Dosya Yapısı
 
-### Türkçe Morfolojik Tokenizer
+Tokenizer üç temel sözlük dosyası kullanır:
+- `kokler_v05.json`: Kök kelimeler ve özel tokenler (0-20000 arası ID'ler)
+- `ekler_v05.json`: Ekler (22268-22767 arası ID'ler)
+- `bpe_v05.json`: BPE token'ları
 
-`turkish_tokenizer` dizininde Python ve Rust ile geliştirilmiş, Türkçe morfolojik analiz yapabilen tokenizer'lar bulunmaktadır. Her iki implementasyon da aynı özelliklere sahiptir:
+### Özel Tokenler
+```json
+{
+    "<uppercase>": 0,    // Büyük harf işareti
+    "<space>": 1,       // Boşluk karakteri
+    "<newline>": 2,     // Satır sonu
+    "<tab>": 3,         // Tab karakteri
+    "<unknown>": 4      // Bilinmeyen token
+}
+```
 
-- Kök kelime ve ek tespiti
-- Büyük harf hassasiyeti
-- Türkçe karakter desteği
-- BPE (Byte-Pair Encoding) yedekleme sistemi
+## Kullanım
 
-#### Python Implementasyonu
+### Python Implementasyonu
 ```python
 from turkish_tokenizer import tokenize
 
-text = "Kitabı ve defterleri getirn, YouTube"
+text = "Kitabı ve defterleri getirn,\nYouTube\t"
 result = tokenize(text)
 print(result)
 ```
 
-#### Rust Implementasyonu
-```bash
-cd turkish_tokenizer
-cargo build --release
-./target/release/turkish_tokenizer "Kitabı ve defterleri getirn, YouTube"
-```
+### Rust Implementasyonu
+```rust
+use turkish_tokenizer::TurkishTokenizer;
 
-Her iki implementasyon da aynı çıktıyı üretir:
-```json
-{
-  "tokens": [
-    "<UPCL>",
-    "kitab",
-    "ı",
-    "ve",
-    "defter",
-    "ler",
-    "i",
-    "getir",
-    "n",
-    ",",
-    "<UPCL>",
-    "yo",
-    "u",
-    "<UPCL>",
-    "tu",
-    "be"
-  ],
-  "ids": [
-    0,
-    385,
-    19936,
-    19901,
-    2001,
-    19934,
-    19935,
-    159,
-    19950,
-    20022,
-    0,
-    643,
-    19937,
-    0,
-    21941,
-    21383
-  ]
+fn main() {
+    let mut tokenizer = TurkishTokenizer::new().unwrap();
+    let text = "Kitabı ve defterleri getirn,\nYouTube\t";
+    let result = tokenizer.tokenize(text).unwrap();
+    println!("{}", serde_json::to_string_pretty(&result).unwrap());
 }
 ```
 
-Detaylı bilgi ve kullanım kılavuzu için: [Turkish Tokenizer Documentation](turkish_tokenizer/README.md)
+## Implementasyon Özellikleri
 
-### Implementasyon Farklılıkları
+### Python Versiyonu
+1. **Temel Özellikler**:
+   - Basit ve anlaşılır kod yapısı
+   - Kolay entegrasyon
+   - Hızlı prototipleme için uygun
+   - Dinamik tip sistemi
 
-1. **Performans**:
-   - Rust implementasyonu `rayon` ile paralel işleme yapabilir
-   - Rust versiyonu daha verimli bellek yönetimi sunar
-   - Python versiyonu daha basit ve değiştirmesi kolaydır
+2. **Performans Özellikleri**:
+   - Sıralı işleme
+   - Bellek dostu veri yapıları
+   - Yorumlanmış dil avantajları
 
-2. **String İşleme**:
-   - Rust UTF-8 farkındalıklı string işlemleri kullanır
-   - Python doğal Unicode desteğine sahiptir
+### Rust Versiyonu
+1. **Temel Özellikler**:
+   - Güvenli bellek yönetimi
+   - Statik tip sistemi
+   - Thread-safe veri yapıları
+   - Sıfır maliyetli soyutlamalar
 
-3. **Bellek Kullanımı**:
-   - Rust sıfır maliyetli soyutlamalar kullanır
-   - Python referans sayımı ve çöp toplama kullanır
+2. **Performans Özellikleri**:
+   - Paralel işleme desteği (Rayon)
+   - Verimli UTF-8 karakter işleme
+   - Düşük seviye optimizasyonlar
+   - Önbellekleme mekanizmaları
+
+3. **Teknik Detaylar**:
+   - Arc ile thread-safe paylaşımlı veri
+   - Regex ile gelişmiş kelime bölümleme
+   - Lazy static ile verimli statik kaynaklar
+   - Zero-copy string işlemleri
 
 ## Geliştirme ve Katkıda Bulunma
 
-Projeye katkıda bulunmak için:
+### Geliştirme Ortamı Kurulumu
 
-1. Repository'yi fork edin
-2. Yeni bir branch oluşturun
-3. Değişikliklerinizi commit edin
-4. Pull request açın
+1. Repository'yi klonlayın:
+```bash
+git clone <repository-url>
+cd tokenizer
+```
+
+2. Python ortamını hazırlayın:
+```bash
+python -m venv venv
+source venv/bin/activate  # Unix/macOS
+# veya
+.\venv\Scripts\activate  # Windows
+```
+
+3. Rust toolchain'i kurun:
+```bash
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+# veya
+rustup update
+```
+
+### Geliştirme Süreci
+
+1. Yeni bir branch oluşturun:
+```bash
+git checkout -b feature/yeni-ozellik
+```
+
+2. Testleri çalıştırın:
+```bash
+# Python testleri
+python -m pytest tests/
+
+# Rust testleri
+cargo test
+```
+
+3. Kod stilini kontrol edin:
+```bash
+# Python
+flake8 .
+black .
+
+# Rust
+cargo fmt
+cargo clippy
+```
+
+4. Değişikliklerinizi commit edin:
+```bash
+git add .
+git commit -m "feat: yeni özellik eklendi"
+```
+
+### Pull Request Süreci
+
+1. Branch'inizi push edin:
+```bash
+git push origin feature/yeni-ozellik
+```
+
+2. GitHub üzerinden pull request açın
+3. Code review sürecini takip edin
+4. Gerekli düzeltmeleri yapın
+5. PR'ınız onaylandığında main branch'e merge edilecektir
+
+### Geliştirme Gereksinimleri
+
+#### Python
+- Python 3.6+
+- pytest
+- black
+- flake8
+- JSON desteği
+- UTF-8 karakter desteği
+
+#### Rust
+- Rust 1.50+
+- Cargo paket yöneticisi
+- rustfmt
+- clippy
+- Bağımlılıklar:
+  - serde (JSON işleme)
+  - rayon (paralel işleme)
+  - regex (kelime bölümleme)
+  - lazy_static (statik kaynaklar)
 
 ## Lisans
 
