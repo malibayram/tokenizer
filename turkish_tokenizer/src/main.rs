@@ -1,9 +1,31 @@
+use lazy_static::lazy_static;
 use rayon::prelude::*;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::BufReader;
+use std::path::Path;
+use std::sync::Arc;
+
+// Static references for special tokens
+static UPPERCASE_TOKEN: &str = "<uppercase>";
+static SPACE_TOKEN: &str = "<space>";
+static NEWLINE_TOKEN: &str = "<newline>";
+static TAB_TOKEN: &str = "<tab>";
+static UNKNOWN_TOKEN: &str = "<unknown>";
+
+// Special token IDs
+const UPPERCASE_ID: u32 = 0;
+const SPACE_ID: u32 = 1;
+const NEWLINE_ID: u32 = 2;
+const TAB_ID: u32 = 3;
+const UNKNOWN_ID: u32 = 4;
+
+lazy_static! {
+    static ref WORD_BOUNDARY: Regex = Regex::new(r"[\p{L}\p{N}]+|[.,!?;]").unwrap();
+    static ref UPPERCASE_SPLIT: Regex = Regex::new(r"([A-Z][^A-Z\s]*)|([^A-Z\s]+)").unwrap();
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 struct TokenizerOutput {
@@ -11,162 +33,243 @@ struct TokenizerOutput {
     ids: Vec<u32>,
 }
 
+#[derive(Debug)]
+pub enum TokenizerError {
+    FileNotFound(String),
+    ParseError(String),
+    InvalidInput(String),
+}
+
+struct TokenCache {
+    roots: Arc<HashMap<String, u32>>,
+    suffixes: Arc<HashMap<String, u32>>,
+    bpe_tokens: Arc<HashMap<String, u32>>,
+    lookup_cache: HashMap<String, Option<(String, u32, String)>>,
+}
+
 struct TurkishTokenizer {
-    roots: HashMap<String, u32>,
-    suffixes: HashMap<String, u32>,
-    bpe_tokens: HashMap<String, u32>,
-    word_regex: Regex,
+    cache: TokenCache,
 }
 
 impl TurkishTokenizer {
-    fn new() -> Self {
-        let roots = Self::load_json("kokler_v04.json");
-        let suffixes = Self::load_json("ekler_v04.json");
-        let bpe_tokens = Self::load_json("bpe_v02.json");
-        let word_regex = Regex::new(r"[\w]+|[.,!?;]").unwrap();
+    fn new() -> Result<Self, TokenizerError> {
+        let current_dir = std::env::current_dir().map_err(|e| TokenizerError::FileNotFound(e.to_string()))?;
+        let roots = Arc::new(Self::load_json(current_dir.join("kokler_v05.json"))?);
+        let suffixes = Arc::new(Self::load_json(current_dir.join("ekler_v05.json"))?);
+        let bpe_tokens = Arc::new(Self::load_json(current_dir.join("bpe_v05.json"))?);
 
-        TurkishTokenizer {
-            roots,
-            suffixes,
-            bpe_tokens,
-            word_regex,
-        }
+        Ok(TurkishTokenizer {
+            cache: TokenCache {
+                roots,
+                suffixes,
+                bpe_tokens,
+                lookup_cache: HashMap::new(),
+            },
+        })
     }
 
-    fn load_json(file_path: &str) -> HashMap<String, u32> {
-        let file = File::open(file_path).expect(&format!("Failed to open {}", file_path));
+    fn load_json<P: AsRef<Path>>(file_path: P) -> Result<HashMap<String, u32>, TokenizerError> {
+        let file = File::open(&file_path)
+            .map_err(|e| TokenizerError::FileNotFound(format!("Failed to open {:?}: {}", file_path.as_ref(), e)))?;
         let reader = BufReader::new(file);
-        serde_json::from_reader(reader).expect(&format!("Failed to parse {}", file_path))
+        serde_json::from_reader(reader)
+            .map_err(|e| TokenizerError::ParseError(format!("Failed to parse {:?}: {}", file_path.as_ref(), e)))
     }
 
-    fn tokenize(&self, text: &str) -> TokenizerOutput {
-        let words: Vec<_> = self.word_regex.find_iter(text).collect();
-        let tokens_and_ids: Vec<(Vec<String>, Vec<u32>)> = words
-            .par_iter() // Parallelize processing while maintaining order
-            .map(|word| self.process_word(word.as_str()))
+    fn tokenize(&mut self, text: &str) -> Result<TokenizerOutput, TokenizerError> {
+        let text = text.replace("\\n", "\n").replace("\\t", "\t");
+        let mut tokens = Vec::new();
+        let mut ids = Vec::new();
+
+        // Split text into chunks for parallel processing
+        let chunks: Vec<_> = WORD_BOUNDARY.find_iter(&text)
             .collect();
 
-        let mut tokens = Vec::new();
-        let mut ids = Vec::new();
+        // Process chunks in parallel
+        let results: Vec<_> = chunks.par_iter()
+            .map(|m| {
+                let mut chunk_tokens = Vec::new();
+                let mut chunk_ids = Vec::new();
+                let word = m.as_str();
 
-        for (token_list, id_list) in tokens_and_ids {
-            tokens.extend(token_list);
-            ids.extend(id_list);
-        }
-
-        TokenizerOutput { tokens, ids }
-    }
-
-    fn process_word(&self, word: &str) -> (Vec<String>, Vec<u32>) {
-        let mut tokens = Vec::new();
-        let mut ids = Vec::new();
-
-        if word.chars().any(char::is_uppercase) {
-            // Add initial UPCL token if word starts with uppercase
-            if word.chars().next().unwrap().is_uppercase() {
-                tokens.push("<UPCL>".to_string());
-                ids.push(*self.roots.get("<UPCL>").unwrap_or(&0));
-            }
-
-            // Split by uppercase letters and process each part
-            let mut current = String::new();
-            let mut is_first = true;
-
-            for c in word.chars() {
-                if c.is_uppercase() && !is_first {
-                    if !current.is_empty() {
-                        self.process_lowercase_word(&current.to_lowercase(), &mut tokens, &mut ids);
+                if word.chars().any(char::is_uppercase) {
+                    // Process uppercase words
+                    for cap in UPPERCASE_SPLIT.captures_iter(word) {
+                        if let Some(part) = cap.get(0) {
+                            let part = part.as_str();
+                            if !part.is_empty() {
+                                if part.chars().next().unwrap().is_uppercase() {
+                                    chunk_tokens.push(UPPERCASE_TOKEN.to_string());
+                                    chunk_ids.push(UPPERCASE_ID);
+                                    self.process_lowercase_word(&part.to_lowercase(), &mut chunk_tokens, &mut chunk_ids)?;
+                                } else {
+                                    self.process_lowercase_word(part, &mut chunk_tokens, &mut chunk_ids)?;
+                                }
+                            }
+                        }
                     }
-                    tokens.push("<UPCL>".to_string());
-                    ids.push(*self.roots.get("<UPCL>").unwrap_or(&0));
-                    current.clear();
-                    current.push(c);
                 } else {
-                    current.push(c);
+                    self.process_lowercase_word(word, &mut chunk_tokens, &mut chunk_ids)?;
                 }
-                is_first = false;
+
+                Ok((chunk_tokens, chunk_ids))
+            })
+            .collect::<Result<Vec<_>, TokenizerError>>()?;
+
+        // Combine results and handle whitespace
+        let mut last_end = 0;
+        for (i, m) in chunks.iter().enumerate() {
+            // Handle whitespace before the chunk
+            for c in text[last_end..m.start()].chars() {
+                match c {
+                    ' ' => {
+                        tokens.push(SPACE_TOKEN.to_string());
+                        ids.push(SPACE_ID);
+                    }
+                    '\n' => {
+                        tokens.push(NEWLINE_TOKEN.to_string());
+                        ids.push(NEWLINE_ID);
+                    }
+                    '\t' => {
+                        tokens.push(TAB_TOKEN.to_string());
+                        ids.push(TAB_ID);
+                    }
+                    _ => {
+                        tokens.push(UNKNOWN_TOKEN.to_string());
+                        ids.push(UNKNOWN_ID);
+                    }
+                }
             }
 
-            if !current.is_empty() {
-                self.process_lowercase_word(&current.to_lowercase(), &mut tokens, &mut ids);
-            }
-        } else {
-            self.process_lowercase_word(word, &mut tokens, &mut ids);
+            // Add chunk results
+            let (chunk_tokens, chunk_ids) = &results[i];
+            tokens.extend(chunk_tokens.iter().cloned());
+            ids.extend_from_slice(chunk_ids);
+
+            last_end = m.end();
         }
 
-        (tokens, ids)
+        // Handle remaining whitespace
+        for c in text[last_end..].chars() {
+            match c {
+                ' ' => {
+                    tokens.push(SPACE_TOKEN.to_string());
+                    ids.push(SPACE_ID);
+                }
+                '\n' => {
+                    tokens.push(NEWLINE_TOKEN.to_string());
+                    ids.push(NEWLINE_ID);
+                }
+                '\t' => {
+                    tokens.push(TAB_TOKEN.to_string());
+                    ids.push(TAB_ID);
+                }
+                _ => {
+                    tokens.push(UNKNOWN_TOKEN.to_string());
+                    ids.push(UNKNOWN_ID);
+                }
+            }
+        }
+
+        Ok(TokenizerOutput { tokens, ids })
     }
 
-    fn process_lowercase_word(&self, word: &str, tokens: &mut Vec<String>, ids: &mut Vec<u32>) {
-        if let Some((root, root_id, remainder)) = self.match_root(word) {
-            tokens.push(root);
+    fn process_lowercase_word(&self, word: &str, tokens: &mut Vec<String>, ids: &mut Vec<u32>) -> Result<(), TokenizerError> {
+        if let Some((root, root_id, remainder)) = self.match_root_cached(word) {
+            tokens.push(root.to_string());
             ids.push(root_id);
-            self.process_remainder(&remainder, tokens, ids);
+            if !remainder.is_empty() {
+                self.process_remainder(remainder, tokens, ids)?;
+            }
         } else {
-            self.process_bpe(word, tokens, ids);
+            let success = self.process_bpe(word, tokens, ids);
+            if !success {
+                tokens.push(UNKNOWN_TOKEN.to_string());
+                ids.push(UNKNOWN_ID);
+            }
         }
+        Ok(())
     }
 
-    fn match_root(&self, word: &str) -> Option<(String, u32, String)> {
-        let chars: Vec<char> = word.chars().collect();
-        for i in (1..=chars.len()).rev() {
-            let prefix: String = chars[..i].iter().collect();
-            if let Some(&id) = self.roots.get(&prefix) {
-                let remainder: String = chars[i..].iter().collect();
+    fn match_root_cached<'a>(&'a self, word: &'a str) -> Option<(&'a str, u32, &'a str)> {
+        if let Some(cached) = self.cache.lookup_cache.get(word) {
+            return cached.as_ref().map(|(r, id, rem)| (r.as_str(), *id, rem.as_str()));
+        }
+        self.match_root(word)
+    }
+
+    fn match_root<'a>(&'a self, word: &'a str) -> Option<(&'a str, u32, &'a str)> {
+        for (i, _) in word.char_indices().rev() {
+            let (prefix, remainder) = word.split_at(i);
+            if let Some(&id) = self.cache.roots.get(prefix) {
                 return Some((prefix, id, remainder));
             }
         }
         None
     }
 
-    fn process_remainder(&self, remainder: &str, tokens: &mut Vec<String>, ids: &mut Vec<u32>) {
-        if remainder.is_empty() {
-            return;
-        }
-
+    fn process_remainder(&self, remainder: &str, tokens: &mut Vec<String>, ids: &mut Vec<u32>) -> Result<(), TokenizerError> {
         if let Some((suffix, suffix_id)) = self.match_suffix(remainder) {
-            tokens.push(suffix.clone());
+            tokens.push(suffix.to_string());
             ids.push(suffix_id);
             let new_remainder = &remainder[suffix.len()..];
-            self.process_remainder(new_remainder, tokens, ids);
+            if !new_remainder.is_empty() {
+                self.process_remainder(new_remainder, tokens, ids)?;
+            }
+        } else if let Some((root, root_id, new_remainder)) = self.match_root_cached(remainder) {
+            tokens.push(root.to_string());
+            ids.push(root_id);
+            if !new_remainder.is_empty() {
+                self.process_remainder(new_remainder, tokens, ids)?;
+            }
         } else {
-            self.process_bpe(remainder, tokens, ids);
+            let success = self.process_bpe(remainder, tokens, ids);
+            if !success {
+                tokens.push(UNKNOWN_TOKEN.to_string());
+                ids.push(UNKNOWN_ID);
+            }
         }
+        Ok(())
     }
 
-    fn match_suffix(&self, word: &str) -> Option<(String, u32)> {
-        let chars: Vec<char> = word.chars().collect();
-        for i in (1..=chars.len()).rev() {
-            let current: String = chars[..i].iter().collect();
-            if let Some(&id) = self.suffixes.get(&current) {
+    fn match_suffix<'a>(&'a self, word: &'a str) -> Option<(&'a str, u32)> {
+        for (i, _) in word.char_indices().rev() {
+            let current = &word[..i];
+            if let Some(&id) = self.cache.suffixes.get(current) {
                 return Some((current, id));
             }
         }
         None
     }
 
-    fn process_bpe(&self, word: &str, tokens: &mut Vec<String>, ids: &mut Vec<u32>) {
-        let chars: Vec<char> = word.chars().collect();
+    fn process_bpe(&self, word: &str, tokens: &mut Vec<String>, ids: &mut Vec<u32>) -> bool {
         let mut i = 0;
+        let mut found_any = false;
 
-        while i < chars.len() {
+        while i < word.len() {
             let mut found = false;
+            let mut max_len = word.len();
 
-            for j in (i + 1..=chars.len()).rev() {
-                let substr: String = chars[i..j].iter().collect();
-                if let Some(&id) = self.bpe_tokens.get(&substr) {
-                    tokens.push(substr);
-                    ids.push(id);
-                    i = j;
-                    found = true;
-                    break;
+            // Try to find the longest matching substring first
+            while max_len > i {
+                if let Some(substr) = word.get(i..max_len) {
+                    if let Some(&id) = self.cache.bpe_tokens.get(substr) {
+                        tokens.push(substr.to_string());
+                        ids.push(id);
+                        i = max_len;
+                        found = true;
+                        found_any = true;
+                        break;
+                    }
                 }
+                max_len -= 1;
             }
 
             if !found {
                 i += 1;
             }
         }
+        found_any
     }
 }
 
@@ -177,9 +280,20 @@ fn main() {
         std::process::exit(1);
     }
 
-    let tokenizer = TurkishTokenizer::new();
-    let input = args[1..].join(" ");
-    let output = tokenizer.tokenize(&input);
+    let mut tokenizer = match TurkishTokenizer::new() {
+        Ok(t) => t,
+        Err(e) => {
+            eprintln!("Failed to initialize tokenizer: {:?}", e);
+            std::process::exit(1);
+        }
+    };
 
-    println!("{}", serde_json::to_string_pretty(&output).unwrap());
+    let input = args[1..].join(" ");
+    match tokenizer.tokenize(&input) {
+        Ok(output) => println!("{}", serde_json::to_string_pretty(&output).unwrap()),
+        Err(e) => {
+            eprintln!("Failed to tokenize input: {:?}", e);
+            std::process::exit(1);
+        }
+    }
 }
