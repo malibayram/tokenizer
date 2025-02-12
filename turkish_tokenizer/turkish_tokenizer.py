@@ -13,9 +13,16 @@ def load_json(file_path: str) -> Dict[str, int]:
         return json.load(file)
 
 # Load roots, suffixes, and BPE tokens
-roots = load_json("kokler_v05.json")
+roots = load_json("kokler_v07.json")
 suffixes = load_json("ekler_v05.json")
 bpe_tokens = load_json("bpe_v05.json")
+
+reverse_dict = {}
+
+for key, value in {**roots, **suffixes, **bpe_tokens}.items():
+    if value not in reverse_dict:
+        reverse_dict[value] = []
+    reverse_dict[value].append(key)
 
 # Special token IDs
 SPECIAL_TOKENS = {
