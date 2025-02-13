@@ -173,3 +173,143 @@ if __name__ == "__main__":
     Bir maddenin yanması ile çıkan ve içinde katı zerrelerle buğu bulunan değişik renklerde gaz
     {'tokens': ['<uppercase>', 'bir', '<space>', 'madde', 'nin', '<space>', 'yan', 'ma', 'sı', '<space>', 'ile', '<space>', 'çık', 'a', 'n', '<space>', 've', '<space>', 'için', 'de', '<space>', 'katı', '<space>', 'zerre', 'ler', 'le', '<space>', 'buğu', '<space>', 'bulun', 'a', 'n', '<space>', 'değişik', '<space>', 'renk', 'ler', 'de', '<space>', 'gaz'], 'ids': [0, 1, 1, 175, 22280, 1, 59, 22288, 22286, 1, 19888, 1, 422, 22274, 22284, 1, 19901, 1, 19886, 22277, 1, 926, 1, 5976, 22268, 22281, 1, 13592, 1, 13, 22274, 22284, 1, 273, 1, 564, 22268, 22277, 1, 965]} 
     """
+
+vowels = ["a", "e", "ı", "i", "o", "ö", "u", "ü"]
+consonants = ["b", "c", "ç", "d", "f", "g", "ğ", "h", "j", "k", "l", "m", "n", "p", "r", "s", "ş", "t", "v", "y", "z"]
+back_vowels = ["a", "ı", "o", "u"]
+front_vowels = ["e", "i", "ö", "ü"]
+hard_consonants = ["ç", "f", "h", "k", "p", "s", "ş", "t"]
+consonant_softening_dict = {
+    'ç': 'c',   
+    'p': 'b',
+    't': 'd',
+    'k': 'ğ',
+}
+
+def consonant_softening(word):
+    if word[-1] in consonant_softening_dict:
+        return word[:-1] + consonant_softening_dict[word[-1]]
+    else:
+        return word
+    
+def suffix_hardening(suffix):
+    if suffix[0] == "d":
+        return "t" + suffix[1:]
+    return suffix
+
+def vowel_reduction(word):  
+    if word[-2] in vowels:
+        word = word[:-2] + word[-1]
+    return word
+
+def narrow_vowel(word):
+    if word[-1] in ["a"]:
+        if (word[:-1] + "ı") in roots:
+            return word[:-1] + "ı"
+        elif (word[:-1] + "u") in roots:
+            return word[:-1] + "u"
+    elif word[-1] in ["e"]:
+        if (word[:-1] + "i") in roots:
+            return word[:-1] + "i"
+        elif (word[:-1] + "ü") in roots:
+            return word[:-1] + "ü"
+
+def first_vowel(word):
+    for i in range(len(word)):
+        if word[i] in vowels:
+            return i
+    return -1
+
+def last_vowel(word):
+    for i in range(len(word)-1, -1, -1):
+        if word[i] in vowels:
+            return i
+    return -1
+
+# def is_back_vowel(word):
+#     for i in range(len(word)):
+#         if word[i] in back_vowels:
+#             return True
+#     return False
+
+def vowel_thinner(word):
+    for i in range(len(word)):
+        if word[i] in "a":
+            word[i] = "e"
+    return word
+
+def choose_correct_version(cur_token: int, next_token: str, prev_token: str):
+    tokens = reverse_dict[cur_token] 
+    i = 0
+    while len(tokens) > 1:
+        if cur_token <= 2267:
+            #yumuşama 
+            for i in range(len(tokens)):
+                if tokens[i][-1] in hard_consonants and consonant_softening(tokens[i]) in tokens:
+                    if not next_token[0] in vowels:
+                        tokens.pop(consonant_softening(tokens[i]))
+                    else:
+                        tokens.pop(tokens[i])
+            #düşme 
+            for i in range(len(tokens)):
+                if tokens[i][-1] in consonants and vowel_reduction(tokens[i]) in tokens:
+                    if not next_token[0] in vowels:
+                        tokens.pop(vowel_reduction(tokens[i]))
+                    else:
+                        tokens.pop(tokens[i])
+            #daralma
+            for i in range(len(tokens)):
+                if tokens[i][-1] in ["a", "e"] and narrow_vowel(tokens[i]) in tokens:
+                    if not next_token[0].startswith("yor"):
+                        tokens.pop(narrow_vowel(tokens[i]))
+                    else:
+                        tokens.pop(tokens[i])
+        else:
+            #den ten
+            for i in range(len(tokens)):
+                if tokens[i][0] == "d" and suffix_hardening(tokens[i]) in tokens:
+                    if not prev_token[-1] in hard_consonants:
+                        tokens.pop(suffix_hardening(tokens[i]))
+                    else:
+                        tokens.pop(tokens[i])
+            #ler lar 
+            for i in range(len(tokens)):
+                if first_vowel(tokens[i]) in back_vowels and vowel_thinner(tokens[i]) in tokens:
+                    if not last_vowel(prev_token) in back_vowels:
+                        tokens.pop(tokens[i])
+                    else:
+                        tokens.pop(vowel_thinner(tokens[i]))
+    return tokens[0]
+                        
+            
+    
+
+def decode_text(list):
+    prev_token = ""
+    result = ""
+    for i in range(len(list)):
+        cur_token = list[i]
+        next_token = list[i+1]
+        
+        if(reverse_dict[cur_token] == "[UNKOWN]"):
+            prev_token = cur_token
+            continue
+        if(len(reverse_dict[cur_token]) == 1):
+            if(reverse_dict[prev_token] == "[UPPERCASE]"):
+                result += reverse_dict[cur_token].upper()
+                prev_token = cur_token
+                continue
+            result += reverse_dict[cur_token]
+            prev_token = cur_token
+            continue
+        elif(len(reverse_dict[cur_token]) > 1):
+            if type(reverse_dict[next_token]) == 'string':
+                result += choose_correct_version(cur_token, reverse_dict[next_token], reverse_dict[prev_token], reverse_dict)
+            else:
+                result += choose_correct_version(cur_token, reverse_dict[next_token][0], reverse_dict[prev_token][0], reverse_dict)
+            prev_token = cur_token
+            continue
+        else:
+            continue
+    return result
+    
