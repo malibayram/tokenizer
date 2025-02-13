@@ -76,3 +76,6 @@ yarn-error.log*
 # Temporary files
 tmp/
 temp/
+
+# Streamlit app
+turkish_tiktokenizer/temp_tokenizer/
