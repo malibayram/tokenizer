@@ -19,10 +19,21 @@ bpe_tokens = load_json("bpe_v05.json")
 
 reverse_dict = {}
 
-for key, value in {**roots, **suffixes, **bpe_tokens}.items():
+for key, value in roots.items():
     if value not in reverse_dict:
         reverse_dict[value] = []
     reverse_dict[value].append(key)
+    
+for key, value in suffixes.items():
+    if value not in reverse_dict:
+        reverse_dict[value] = []
+    reverse_dict[value].append(key)
+    
+for key, value in bpe_tokens.items():
+    if value not in reverse_dict:
+        reverse_dict[value] = []
+    reverse_dict[value].append(key)
+    
 
 # Special token IDs
 SPECIAL_TOKENS = {
@@ -178,6 +189,7 @@ vowels = ["a", "e", "ı", "i", "o", "ö", "u", "ü"]
 consonants = ["b", "c", "ç", "d", "f", "g", "ğ", "h", "j", "k", "l", "m", "n", "p", "r", "s", "ş", "t", "v", "y", "z"]
 back_vowels = ["a", "ı", "o", "u"]
 front_vowels = ["e", "i", "ö", "ü"]
+suffix_group = ["i", "ı", "u", "ü"]
 hard_consonants = ["ç", "f", "h", "k", "p", "s", "ş", "t"]
 consonant_softening_dict = {
     'ç': 'c',   
@@ -232,6 +244,16 @@ def last_vowel(word):
 #             return True
 #     return False
 
+def vowel_variator(word):
+    variations = [word]
+    variations.append(word[:first_vowel(word)] + "i" + word[first_vowel(word)+1:])
+    variations.append(word[:first_vowel(word)] + "ı" + word[first_vowel(word)+1:])
+    variations.append(word[:first_vowel(word)] + "u" + word[first_vowel(word)+1:])
+    variations.append(word[:first_vowel(word)] + "ü" + word[first_vowel(word)+1:])
+    variations = list(set(variations))
+    return variations
+    
+
 def vowel_thinner(word):
     for i in range(len(word)):
         if word[i] in "a":
@@ -239,12 +261,15 @@ def vowel_thinner(word):
     return word
 
 def choose_correct_version(cur_token: int, next_token: str, prev_token: str):
+    print("hoşgeldin ")
     tokens = reverse_dict[cur_token] 
     i = 0
     while len(tokens) > 1:
+        print("while girdi")
         if cur_token <= 2267:
             #yumuşama 
             for i in range(len(tokens)):
+                print("yumuşama girdi")
                 if tokens[i][-1] in hard_consonants and consonant_softening(tokens[i]) in tokens:
                     if not next_token[0] in vowels:
                         tokens.pop(consonant_softening(tokens[i]))
@@ -252,6 +277,7 @@ def choose_correct_version(cur_token: int, next_token: str, prev_token: str):
                         tokens.pop(tokens[i])
             #düşme 
             for i in range(len(tokens)):
+                print("düşme girdi")
                 if tokens[i][-1] in consonants and vowel_reduction(tokens[i]) in tokens:
                     if not next_token[0] in vowels:
                         tokens.pop(vowel_reduction(tokens[i]))
@@ -259,6 +285,7 @@ def choose_correct_version(cur_token: int, next_token: str, prev_token: str):
                         tokens.pop(tokens[i])
             #daralma
             for i in range(len(tokens)):
+                print("daralma girdi")
                 if tokens[i][-1] in ["a", "e"] and narrow_vowel(tokens[i]) in tokens:
                     if not next_token[0].startswith("yor"):
                         tokens.pop(narrow_vowel(tokens[i]))
@@ -267,6 +294,7 @@ def choose_correct_version(cur_token: int, next_token: str, prev_token: str):
         else:
             #den ten
             for i in range(len(tokens)):
+                print("den ten girdi")
                 if tokens[i][0] == "d" and suffix_hardening(tokens[i]) in tokens:
                     if not prev_token[-1] in hard_consonants:
                         tokens.pop(suffix_hardening(tokens[i]))
@@ -274,12 +302,36 @@ def choose_correct_version(cur_token: int, next_token: str, prev_token: str):
                         tokens.pop(tokens[i])
             #ler lar 
             for i in range(len(tokens)):
-                if first_vowel(tokens[i]) in back_vowels and vowel_thinner(tokens[i]) in tokens:
-                    if not last_vowel(prev_token) in back_vowels:
+                fv_index = first_vowel(tokens[i])
+                if fv_index is None or fv_index == -1 or fv_index >= len(tokens[i]):
+                    continue
+                if tokens[i][first_vowel(tokens[i])] in back_vowels and vowel_thinner(tokens[i]) in tokens:
+                    if not prev_token[last_vowel(prev_token)] in back_vowels:
                         tokens.pop(tokens[i])
                     else:
-                        tokens.pop(vowel_thinner(tokens[i]))
+                        tokens.remove(vowel_thinner(tokens[i]))
+            for i in range(len(tokens)):
+                print("sı si girdi")
+                #buraya sı si su sü eklemesi yapılacak 
+                if tokens[i][first_vowel(tokens[i])] in suffix_group and any(variation in vowel_variator(tokens[i]) for variation in tokens):
+                    if prev_token[last_vowel(prev_token)] == "a" or prev_token[last_vowel(prev_token)] == "ı":
+                        for variation in vowel_variator(tokens[i]):
+                            if variation in tokens and variation[first_vowel(variation)] != "ı":
+                                tokens.pop(variation)
+                    elif prev_token[last_vowel(prev_token)] == "e" or prev_token[last_vowel(prev_token)] == "i":
+                        for variation in vowel_variator(tokens[i]):
+                            if variation in tokens and variation[first_vowel(variation)] != "i":
+                                tokens.pop(variation)
+                    elif prev_token[last_vowel(prev_token)] == "o" or prev_token[last_vowel(prev_token)] == "u":
+                        for variation in vowel_variator(tokens[i]):
+                            if variation in tokens and variation[first_vowel(variation)] != "u":
+                                tokens.pop(variation)
+                    elif prev_token[last_vowel(prev_token)] == "ö" or prev_token[last_vowel(prev_token)] == "ü":
+                        for variation in vowel_variator(tokens[i]):
+                            if variation in tokens and variation[first_vowel(variation)] != "ü":
+                                tokens.pop(variation)
     return tokens[0]
+
                         
             
     
@@ -295,18 +347,21 @@ def decode_text(list):
             prev_token = cur_token
             continue
         if(len(reverse_dict[cur_token]) == 1):
-            if(reverse_dict[prev_token] == "[UPPERCASE]"):
-                result += reverse_dict[cur_token].upper()
-                prev_token = cur_token
-                continue
-            result += reverse_dict[cur_token]
+            print("merhaba")
+            if not prev_token == "":
+                if(reverse_dict[prev_token] == "[UPPERCASE]"):
+                    result += reverse_dict[cur_token].upper()
+                    prev_token = cur_token
+                    continue
+            result += reverse_dict[cur_token][0]
             prev_token = cur_token
             continue
         elif(len(reverse_dict[cur_token]) > 1):
             if type(reverse_dict[next_token]) == 'string':
-                result += choose_correct_version(cur_token, reverse_dict[next_token], reverse_dict[prev_token], reverse_dict)
+                print("sa")
+                result += choose_correct_version(cur_token, reverse_dict[next_token], reverse_dict[prev_token])
             else:
-                result += choose_correct_version(cur_token, reverse_dict[next_token][0], reverse_dict[prev_token][0], reverse_dict)
+                result += choose_correct_version(cur_token, reverse_dict[next_token][0], reverse_dict[prev_token][0])
             prev_token = cur_token
             continue
         else:
