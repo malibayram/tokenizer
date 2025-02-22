@@ -270,66 +270,74 @@ def choose_correct_version(cur_token: list, next_token: list, prev_token: list, 
     # If token is a root
     if cur_token_index <= 2267:
         # If there is softened form of token 
-        for i in range(len(cur_token)):
-            if cur_token[i][-1] in hard_consonants and consonant_softening(cur_token[i]) in cur_token:
+        for token in cur_token.copy():
+            if not token:
+                continue
+            if token[-1] in hard_consonants and consonant_softening(token) in cur_token:
                 if not next_token[0][0] in vowels:
-                    cur_token.pop(cur_token.index(consonant_softening(cur_token[i])))
+                    cur_token.remove(consonant_softening(token))
                 else:
-                    cur_token.pop(cur_token.index(cur_token[i]))
-        # If thee is a reduced form of token
+                    cur_token.remove(token)
+        # If there is a reduced form of token
         for i in range(len(cur_token)):
-            if cur_token[i][-1] in consonants and vowel_reduction(cur_token[i]) in cur_token:
+            if not token:
+                continue
+            if token[-1] in consonants and vowel_reduction(token) in cur_token:
                 if not next_token[0][0] in vowels:
-                    cur_token.pop(cur_token.index(vowel_reduction(cur_token[i])))
+                    cur_token.remove(vowel_reduction(token))
                 else:
-                    cur_token.pop(cur_token.index(cur_token[i]))
+                    cur_token.remove(token)
         # If there is a narrow vowel form of token
         for i in range(len(cur_token)):
-            if cur_token[i][-1] in ["a", "e"] and narrow_vowel(cur_token[i]) in cur_token:
+            if not token:
+                continue
+            if token[-1] in ["a", "e"] and narrow_vowel(token) in cur_token:
                 if not next_token[0].startswith("yor"):
-                    cur_token.pop(cur_token.index(narrow_vowel(cur_token[i])))
+                    cur_token.remove(narrow_vowel(token))
                 else:
-                    cur_token.pop(cur_token.index(cur_token[i]))
+                    cur_token.remove(token)
     # If token is a suffix
     else:
         # "d-t" variation of suffixes
         for i in range(len(cur_token)):
-            if cur_token[i][0] == "d" and suffix_hardening(cur_token[i]) in cur_token:
+            if not token:
+                continue
+            if token[0] == "d" and suffix_hardening(token) in cur_token:
                 if not prev_token[-1] in hard_consonants:
-                    cur_token.remove(suffix_hardening(cur_token[i]))
+                    cur_token.remove(suffix_hardening(token))
                 else:
-                    cur_token.remove(cur_token[i])
+                    cur_token.remove(token)
         # "e-a" variation of suffixes
         for i in range(len(cur_token)):
             print("e-a")
-            fv_index = first_vowel(cur_token[i])
-            if fv_index is None or fv_index == -1 or fv_index >= len(cur_token[i]):
+            fv_index = first_vowel(token)
+            if fv_index is None or fv_index == -1 or fv_index >= len(token):
                 continue
-            if cur_token[i][first_vowel(cur_token[i])] in back_vowels and vowel_thinner(cur_token[i]) in cur_token:
+            if token[first_vowel(token)] in back_vowels and vowel_thinner(token) in cur_token:
                 if not prev_token[last_vowel(prev_token)] in back_vowels:
-                    cur_token.remove(cur_token[i])
+                    cur_token.remove(token)
                 else:
-                    cur_token.remove(vowel_thinner(cur_token[i]))
+                    cur_token.remove(vowel_thinner(token))
         # "ı-i-u-ü" variation of suffixes
         for i in range(len(cur_token)):
-            if cur_token[i][first_vowel(cur_token[i])] in suffix_group and any(variation in vowel_variator(cur_token[i]) for variation in cur_token):
+            if token[first_vowel(token)] in suffix_group and any(variation in vowel_variator(token) for variation in cur_token):
                 # Below if-else if block checks that which variation of the suffix is correct according to the previous token
                 if prev_token[last_vowel(prev_token)] == "a" or prev_token[last_vowel(prev_token)] == "ı":
-                    for variation in vowel_variator(cur_token[i]):
+                    for variation in vowel_variator(token):
                         if variation in cur_token and variation[first_vowel(variation)] != "ı":
                             cur_token.remove(variation)
                 elif prev_token[last_vowel(prev_token)] == "e" or prev_token[last_vowel(prev_token)] == "i":
-                    for variation in vowel_variator(cur_token[i]):
+                    for variation in vowel_variator(token):
                         if variation in cur_token and variation[first_vowel(variation)] != "i":
                             cur_token.remove(variation)
                 elif prev_token[last_vowel(prev_token)] == "o" or prev_token[last_vowel(prev_token)] == "u":
-                    for variation in vowel_variator(cur_token[i]):
+                    for variation in vowel_variator(token):
                         if variation in cur_token and variation[first_vowel(variation)] != "u":
                             cur_token.remove(variation)
                         if variation in cur_token and variation[first_vowel(variation)] != "u":
                             cur_token.remove(variation)
                 elif prev_token[last_vowel(prev_token)] == "ö" or prev_token[last_vowel(prev_token)] == "ü":
-                    for variation in vowel_variator(cur_token[i]):
+                    for variation in vowel_variator(token):
                         if variation in cur_token and variation[first_vowel(variation)] != "ü":
                             cur_token.remove(variation)
     return cur_token[0]
@@ -350,6 +358,7 @@ def decode_text(list):
     for i in range(len(list)):
         cur_token = reverse_dict[list[i]]
         next_token = []
+        print(cur_token)
         if i != len(list) - 1: 
             next_token = reverse_dict[list[i + 1]]
 
@@ -364,8 +373,11 @@ def decode_text(list):
             continue
         # Checking if the id has more than one corresponding token
         if (len(cur_token) == 1):
-            if (prev_token == "[UPPERCASE]"):
-                result += cur_token[0].upper()
+            if (cur_token[0] == "<uppercase>"):
+                prev_token = cur_token[0]
+                continue
+            if (prev_token == "<uppercase>"):
+                result += cur_token[0].capitalize()
                 prev_token = cur_token[0]
                 continue
             result += cur_token[0]
