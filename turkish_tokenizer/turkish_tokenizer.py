@@ -354,7 +354,12 @@ def decode_text(list):
             next_token = reverse_dict[list[i + 1]]
 
         # Checking if the token is UNKOWN
-        if (cur_token == "[UNKOWN]"):
+        if (cur_token[0] == "[UNKOWN]"):
+            prev_token = cur_token
+            continue
+        # Checking if the token is SPACE
+        if (cur_token[0] == "<space>"):
+            result += " "
             prev_token = cur_token
             continue
         # Checking if the id has more than one corresponding token
