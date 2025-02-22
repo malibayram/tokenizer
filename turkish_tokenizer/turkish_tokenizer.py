@@ -340,7 +340,10 @@ def choose_correct_version(cur_token: list, next_token: list, prev_token: list, 
                     for variation in vowel_variator(token):
                         if variation in cur_token and variation[first_vowel(variation)] != "ü":
                             cur_token.remove(variation)
-    return cur_token[0]
+    if not cur_token:
+        return ""
+    else:
+        return cur_token[0]
 
                         
             
@@ -369,6 +372,16 @@ def decode_text(list):
         # Checking if the token is SPACE
         if (cur_token[0] == "<space>"):
             result += " "
+            prev_token = cur_token
+            continue
+        # Checking if the token is NEWLINE
+        if (cur_token[0] == "<newline>"):
+            result += "\n"
+            prev_token = cur_token
+            continue
+        # Checking if the token is TAB
+        if (cur_token[0] == "<tab>"):
+            result += "\t"
             prev_token = cur_token
             continue
         # Checking if the id has more than one corresponding token
