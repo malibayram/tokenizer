@@ -266,9 +266,9 @@ The function first checks if the token is a root or a suffix by looking to index
 If the token is root than it checks "if there is a variation of that token and chooses the correct version.
 If the token is suffix than it checks if there is a variation of that suffix and chooses the correct version.
 '''
-def choose_correct_version(cur_token: list, next_token: list, prev_token: list, cur_token_index: int) -> str:
+def choose_correct_version(cur_token: list, next_token: list, prev_token: list, cur_token_id: int) -> str:
     # If token is a root
-    if cur_token_index <= 2267:
+    if cur_token_id <= 2267:
         # If there is softened form of token 
         for token in cur_token.copy():
             if not token:
@@ -298,15 +298,6 @@ def choose_correct_version(cur_token: list, next_token: list, prev_token: list, 
                     cur_token.remove(token)
     # If token is a suffix
     else:
-        # "d-t" variation of suffixes
-        for i in range(len(cur_token)):
-            if not token:
-                continue
-            if token[0] == "d" and suffix_hardening(token) in cur_token:
-                if not prev_token[-1] in hard_consonants:
-                    cur_token.remove(suffix_hardening(token))
-                else:
-                    cur_token.remove(token)
         # "e-a" variation of suffixes
         for i in range(len(cur_token)):
             print("e-a")
@@ -340,13 +331,23 @@ def choose_correct_version(cur_token: list, next_token: list, prev_token: list, 
                     for variation in vowel_variator(token):
                         if variation in cur_token and variation[first_vowel(variation)] != "ü":
                             cur_token.remove(variation)
+        # "d-t" variation of suffixes
+        for i in range(len(cur_token)):
+            if not token:
+                continue
+            if token[0] == "d" and suffix_hardening(token) in cur_token:
+                if not prev_token[-1] in hard_consonants:
+                    cur_token.remove(suffix_hardening(token))
+                else:
+                    cur_token.remove(token)
     if not cur_token:
         return ""
     else:
         return cur_token[0]
 
                         
-            
+#def choose_between_two(cur_tokenn):
+    
     
 '''
 This is the function that decodes the tokenized text into a readable text.
@@ -364,7 +365,9 @@ def decode_text(list):
         print(cur_token)
         if i != len(list) - 1: 
             next_token = reverse_dict[list[i + 1]]
-
+        
+        if not cur_token:
+            continue
         # Checking if the token is UNKOWN
         if (cur_token[0] == "[UNKOWN]"):
             prev_token = cur_token
@@ -384,15 +387,16 @@ def decode_text(list):
             result += "\t"
             prev_token = cur_token
             continue
+        # Checking if the token is UPPERCASE
+        if (cur_token[0] == "<uppercase>"):
+            prev_token = cur_token[0]
+            continue
+        if (prev_token == "<uppercase>"):
+            result += cur_token[0].capitalize()
+            prev_token = cur_token[0]
+            continue
         # Checking if the id has more than one corresponding token
         if (len(cur_token) == 1):
-            if (cur_token[0] == "<uppercase>"):
-                prev_token = cur_token[0]
-                continue
-            if (prev_token == "<uppercase>"):
-                result += cur_token[0].capitalize()
-                prev_token = cur_token[0]
-                continue
             result += cur_token[0]
             prev_token = cur_token
             continue
