@@ -269,48 +269,42 @@ If the token is suffix than it checks if there is a variation of that suffix and
 def choose_correct_version(cur_token: list, next_token: list, prev_token: list, cur_token_id: int) -> str:
     # If token is a root
     if cur_token_id <= 2267:
+        # If there is no cur_token
+        if not cur_token:
+            return ""
         # If there is softened form of token 
-        for token in cur_token.copy():
-            if not token:
-                continue
-            if token[-1] in hard_consonants and consonant_softening(token) in cur_token:
-                if not next_token[0][0] in vowels:
-                    cur_token.remove(consonant_softening(token))
-                else:
-                    cur_token.remove(token)
+        if cur_token[0][-1] in hard_consonants and consonant_softening(cur_token[0]) == cur_token[1]:
+            if next_token[0][0] in vowels:
+                return cur_token[1]
+            else:
+                return cur_token[0]
         # If there is a reduced form of token
-        for i in range(len(cur_token)):
-            if not token:
-                continue
-            if token[-1] in consonants and vowel_reduction(token) in cur_token:
-                if not next_token[0][0] in vowels:
-                    cur_token.remove(vowel_reduction(token))
-                else:
-                    cur_token.remove(token)
+        if cur_token[0][-1] in consonants and vowel_reduction(cur_token[0]) == cur_token[1]:
+            if next_token[0][0] in vowels:
+                return cur_token[1]
+            else:
+                return cur_token[0]
         # If there is a narrow vowel form of token
-        for i in range(len(cur_token)):
-            if not token:
-                continue
-            if token[-1] in ["a", "e"] and narrow_vowel(token) in cur_token:
-                if not next_token[0].startswith("yor"):
-                    cur_token.remove(narrow_vowel(token))
-                else:
-                    cur_token.remove(token)
+        if cur_token[0][-1] in ["a", "e"] and narrow_vowel(cur_token[0]) == cur_token[1]:
+            if next_token[0].startswith("yor"):
+                return cur_token[1]
+            else:
+                return cur_token[0]
     # If token is a suffix
     else:
         # "e-a" variation of suffixes
-        for i in range(len(cur_token)):
+        for token in cur_token:
             print("e-a")
             fv_index = first_vowel(token)
             if fv_index is None or fv_index == -1 or fv_index >= len(token):
                 continue
             if token[first_vowel(token)] in back_vowels and vowel_thinner(token) in cur_token:
                 if not prev_token[last_vowel(prev_token)] in back_vowels:
-                    cur_token.remove(token)
-                else:
                     cur_token.remove(vowel_thinner(token))
+                else:
+                    cur_token.remove(token)
         # "ı-i-u-ü" variation of suffixes
-        for i in range(len(cur_token)):
+        for token in cur_token:
             if token[first_vowel(token)] in suffix_group and any(variation in vowel_variator(token) for variation in cur_token):
                 # Below if-else if block checks that which variation of the suffix is correct according to the previous token
                 if prev_token[last_vowel(prev_token)] == "a" or prev_token[last_vowel(prev_token)] == "ı":
@@ -332,7 +326,7 @@ def choose_correct_version(cur_token: list, next_token: list, prev_token: list, 
                         if variation in cur_token and variation[first_vowel(variation)] != "ü":
                             cur_token.remove(variation)
         # "d-t" variation of suffixes
-        for i in range(len(cur_token)):
+        for token in cur_token:
             if not token:
                 continue
             if token[0] == "d" and suffix_hardening(token) in cur_token:
