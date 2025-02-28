@@ -275,6 +275,25 @@ This function takes a list of tokens and returns the correct version of the toke
 The function first checks if the token is a root or a suffix by looking to index of it.
 If the token is root than it checks "if there is a variation of that token and chooses the correct version.
 If the token is suffix than it checks if there is a variation of that suffix and chooses the correct version.
+
+!!prerequiste: all suffixes should be in either one of following forms:
+
+1)
+    _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+    ı i u ü|       |
+           |Soft   | Hardened  
+           |form   | form
+          
+2) 
+    _ _ _ _ _ _ _ _
+    a|e|   |
+     | |SF | Hardened  
+     | |   | form
+     
+    following rules are for the both forms:
+        - the second half of array is for hardened variations of suffix
+        - second half of each half  is for softened variations of suffix
+        - inside of each quarter there are vowel variations of suffix
 '''
 def choose_correct_version(cur_token: list, next_token: list, prev_token: list, cur_token_id: int) -> str:
     # If token is a root
