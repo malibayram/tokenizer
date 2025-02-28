@@ -234,13 +234,13 @@ def narrow_vowel(word):
 def first_vowel(word):
     for i in range(len(word)):
         if word[i] in vowels:
-            return i
+            return word[i]
     return -1
 
 def last_vowel(word):
     for i in range(len(word)-1, -1, -1):
         if word[i] in vowels:
-            return i
+            return word[i]
     return -1
 
 def vowel_variator(word):
@@ -259,6 +259,16 @@ def vowel_thinner(word):
             word[i] = "e"
     return word
 
+def i_u_variation_chooser(prev_token, word):
+    vowel = last_vowel(prev_token)
+    if vowel in ["a", "ı"]:
+        return 0
+    elif vowel in ["e", "i"]:
+        return 1
+    elif vowel in ["o", "u"]:
+        return 2 
+    elif vowel in ["ö", "ü"]:
+        return 3
 
 '''
 This function takes a list of tokens and returns the correct version of the token.
@@ -292,56 +302,37 @@ def choose_correct_version(cur_token: list, next_token: list, prev_token: list, 
                 return cur_token[0]
     # If token is a suffix
     else:
-        # "e-a" variation of suffixes
-        for token in cur_token:
-            print("e-a")
-            fv_index = first_vowel(token)
-            if fv_index is None or fv_index == -1 or fv_index >= len(token):
-                continue
-            if token[first_vowel(token)] in back_vowels and vowel_thinner(token) in cur_token:
-                if not prev_token[last_vowel(prev_token)] in back_vowels:
-                    cur_token.remove(vowel_thinner(token))
-                else:
-                    cur_token.remove(token)
-        # "ı-i-u-ü" variation of suffixes
-        for token in cur_token:
-            if token[first_vowel(token)] in suffix_group and any(variation in vowel_variator(token) for variation in cur_token):
-                # Below if-else if block checks that which variation of the suffix is correct according to the previous token
-                if prev_token[last_vowel(prev_token)] == "a" or prev_token[last_vowel(prev_token)] == "ı":
-                    for variation in vowel_variator(token):
-                        if variation in cur_token and variation[first_vowel(variation)] != "ı":
-                            cur_token.remove(variation)
-                elif prev_token[last_vowel(prev_token)] == "e" or prev_token[last_vowel(prev_token)] == "i":
-                    for variation in vowel_variator(token):
-                        if variation in cur_token and variation[first_vowel(variation)] != "i":
-                            cur_token.remove(variation)
-                elif prev_token[last_vowel(prev_token)] == "o" or prev_token[last_vowel(prev_token)] == "u":
-                    for variation in vowel_variator(token):
-                        if variation in cur_token and variation[first_vowel(variation)] != "u":
-                            cur_token.remove(variation)
-                        if variation in cur_token and variation[first_vowel(variation)] != "u":
-                            cur_token.remove(variation)
-                elif prev_token[last_vowel(prev_token)] == "ö" or prev_token[last_vowel(prev_token)] == "ü":
-                    for variation in vowel_variator(token):
-                        if variation in cur_token and variation[first_vowel(variation)] != "ü":
-                            cur_token.remove(variation)
-        # "d-t" variation of suffixes
-        for token in cur_token:
-            if not token:
-                continue
-            if token[0] == "d" and suffix_hardening(token) in cur_token:
-                if not prev_token[-1] in hard_consonants:
-                    cur_token.remove(suffix_hardening(token))
-                else:
-                    cur_token.remove(token)
-    if not cur_token:
+        # suffix_index helps us choose the right variation of suffix, we will control it by increasing if certain conditions are met.
+        suffix_index = 0
+        # Checking if the suffix have a-e or ı-u variation
+        if (len(cur_token) == 16):
+            # Suffix has ı-u variation 
+            # Check if suffix should be hardened
+            if cur_token[8] != "" and prev_token[0][-1] in hard_consonants:
+                suffix_index += 8
+            # Check if suffix should be softened
+            if cur_token[suffix_index + 4] != "" and next_token[0][0] in vowels:
+                suffix_index += 4
+            # Check which vowel should be used
+            suffix_index += i_u_variation_chooser(prev_token, cur_token)
+            
+        elif (len(cur_token) == 8):
+            # Suffix has a-e variation
+            # Check if suffix should be hardened
+            if cur_token[4] != "" and prev_token[0][-1] in hard_consonants:
+                suffix_index += 4
+            # Check if suffix should be softened
+            if cur_token[suffix_index + 2] != "" and next_token[0][0] in vowels:
+                suffix_index += 2
+            # Check which vowel should be used
+            if last_vowel(prev_token[0]) in front_vowels:
+                suffix_index += 1
+        else: 
+            return cur_token[0]
+    if not cur_token: 
         return ""
     else:
-        return cur_token[0]
-
-                        
-#def choose_between_two(cur_tokenn):
-    
+        return cur_token[suffix_index]
     
 '''
 This is the function that decodes the tokenized text into a readable text.
