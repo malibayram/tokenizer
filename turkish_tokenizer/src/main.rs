@@ -45,6 +45,7 @@ struct TokenCache {
     suffixes: Arc<HashMap<String, u32>>,
     bpe_tokens: Arc<HashMap<String, u32>>,
     lookup_cache: HashMap<String, Option<(String, u32, String)>>,
+    reverse_dict: Arc<HashMap<u32, Vec<String>>>,
 }
 
 struct TurkishTokenizer {
@@ -54,9 +55,34 @@ struct TurkishTokenizer {
 impl TurkishTokenizer {
     fn new() -> Result<Self, TokenizerError> {
         let current_dir = std::env::current_dir().map_err(|e| TokenizerError::FileNotFound(e.to_string()))?;
-        let roots = Arc::new(Self::load_json(current_dir.join("kokler_v05.json"))?);
+
+        let roots = Arc::new(Self::load_json(current_dir.join("kokler_v07.json"))?);
         let suffixes = Arc::new(Self::load_json(current_dir.join("ekler_v05.json"))?);
         let bpe_tokens = Arc::new(Self::load_json(current_dir.join("bpe_v05.json"))?);
+
+        // Create reverse dictionary
+        let mut reverse_dict = HashMap::new();
+        
+        // Add roots to reverse dict
+        for (key, &value) in roots.iter() {
+            reverse_dict.entry(value)
+                .or_insert_with(Vec::new)
+                .push(key.clone());
+        }
+
+        // Add suffixes to reverse dict
+        for (key, &value) in suffixes.iter() {
+            reverse_dict.entry(value)
+                .or_insert_with(Vec::new)
+                .push(key.clone());
+        }
+
+        // Add BPE tokens to reverse dict
+        for (key, &value) in bpe_tokens.iter() {
+            reverse_dict.entry(value)
+                .or_insert_with(Vec::new)
+                .push(key.clone());
+        }
 
         Ok(TurkishTokenizer {
             cache: TokenCache {
@@ -64,6 +90,7 @@ impl TurkishTokenizer {
                 suffixes,
                 bpe_tokens,
                 lookup_cache: HashMap::new(),
+                reverse_dict: Arc::new(reverse_dict),
             },
         })
     }
