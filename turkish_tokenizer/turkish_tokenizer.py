@@ -168,11 +168,11 @@ def process_bpe(word: str, tokens: List[str], ids: List[int]) -> bool:
 # Example execution
 if __name__ == "__main__":
     input_texts = [
-        "Kitabı ve defterleri getirn,\nYouTube\t",
-        "Bir maddenin yanması ile çıkan ve içinde katı zerrelerle buğu bulunan değişik renklerde gaz"
+        """Daha çok uzaktayken güzel sesli birinin söylediği şarkıyı duymuş. Ormanda atını oradan oraya sürmüş ve kuleye varmış sonunda.Fakat
+    sağa bakmış, sola bakmış, ne merdiven görmüş ne de yukarıya çıkılacak başka bir şey. Bu güzel sesin büyüsüne kapılan Prens, 
+    cadının kuleye nasıl çıktığını görüp öğrenene kadar her gün oraya uğrar olmuş."""
     ]
     for input_text in input_texts:
-        print(input_text)
         result = tokenize(input_text)
         print(result)
 
