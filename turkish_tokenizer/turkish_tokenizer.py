@@ -15,7 +15,7 @@ def load_json(file_path: str) -> Dict[str, int]:
 # Load roots, suffixes, and BPE tokens
 roots = load_json("kokler_v07.json")
 suffixes = load_json("ekler_v05.json")
-bpe_tokens = load_json("bpe_v05.json")
+bpe_tokens = load_json("bpe_v06.json")
 
 reverse_dict = {}
 
