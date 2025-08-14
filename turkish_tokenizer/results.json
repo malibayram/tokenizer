@@ -1,0 +1,172 @@
+[
+  {
+    "token": "<unknown>",
+    "id": 4,
+    "type": "ROOT"
+  },
+  {
+    "token": "a",
+    "id": 22274,
+    "type": "SUFFIX"
+  },
+  {
+    "token": "ad",
+    "id": 1053,
+    "type": "ROOT"
+  },
+  {
+    "token": "<unknown>",
+    "id": 4,
+    "type": "ROOT"
+  },
+  {
+    "token": "s",
+    "id": 22323,
+    "type": "SUFFIX"
+  },
+  {
+    "token": "fas",
+    "id": 5488,
+    "type": "ROOT"
+  },
+  {
+    "token": "df",
+    "id": 20573,
+    "type": "BPE"
+  },
+  {
+    "token": "<uppercase>",
+    "id": 0,
+    "type": "ROOT"
+  },
+  {
+    "token": "ali",
+    "id": 327,
+    "type": "ROOT"
+  },
+  {
+    "token": "<uppercase>",
+    "id": 0,
+    "type": "ROOT"
+  },
+  {
+    "token": "ata",
+    "id": 471,
+    "type": "ROOT"
+  },
+  {
+    "token": "<uppercase>",
+    "id": 0,
+    "type": "ROOT"
+  },
+  {
+    "token": "bak",
+    "id": 445,
+    "type": "ROOT"
+  },
+  {
+    "token": "<uppercase>",
+    "id": 0,
+    "type": "ROOT"
+  },
+  {
+    "token": "h",
+    "id": 32012,
+    "type": "BPE"
+  },
+  {
+    "token": "<uppercase>",
+    "id": 0,
+    "type": "ROOT"
+  },
+  {
+    "token": "t",
+    "id": 32053,
+    "type": "BPE"
+  },
+  {
+    "token": "<uppercase>",
+    "id": 0,
+    "type": "ROOT"
+  },
+  {
+    "token": "t",
+    "id": 32053,
+    "type": "BPE"
+  },
+  {
+    "token": "<uppercase>",
+    "id": 0,
+    "type": "ROOT"
+  },
+  {
+    "token": "p",
+    "id": 31974,
+    "type": "BPE"
+  },
+  {
+    "token": "<uppercase>",
+    "id": 0,
+    "type": "ROOT"
+  },
+  {
+    "token": "server",
+    "id": 3883,
+    "type": "ROOT"
+  },
+  {
+    "token": ".",
+    "id": 31897,
+    "type": "BPE"
+  },
+  {
+    "token": "ca",
+    "id": 1212,
+    "type": "ROOT"
+  },
+  {
+    "token": "ll",
+    "id": 20489,
+    "type": "BPE"
+  },
+  {
+    "token": "()",
+    "id": 20803,
+    "type": "BPE"
+  },
+  {
+    "token": "<space>",
+    "id": 1,
+    "type": "ROOT"
+  },
+  {
+    "token": "başka",
+    "id": 237,
+    "type": "ROOT"
+  },
+  {
+    "token": "<space>",
+    "id": 1,
+    "type": "ROOT"
+  },
+  {
+    "token": "<uppercase>",
+    "id": 0,
+    "type": "ROOT"
+  },
+  {
+    "token": "bir",
+    "id": 100,
+    "type": "ROOT"
+  },
+  {
+    "token": "<uppercase>",
+    "id": 0,
+    "type": "ROOT"
+  },
+  {
+    "token": "şey",
+    "id": 156,
+    "type": "ROOT"
+  }
+]
