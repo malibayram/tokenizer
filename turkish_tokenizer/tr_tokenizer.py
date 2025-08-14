@@ -2,6 +2,9 @@ import json
 from enum import Enum
 from typing import Dict, List, Optional, Tuple
 
+from tr_decoder import TRDecoder
+from tr_gpt_decoder import TRGPTTokenizer
+
 
 class TokenType(Enum):
     ROOT = "ROOT"
@@ -30,6 +33,9 @@ class TRTokenizer:
             if value not in self.reverse_dict:
                 self.reverse_dict[value] = []
             self.reverse_dict[value].append(key)
+
+        self.decoder = TRDecoder(self.reverse_dict)
+        self.gpt_decoder = TRGPTTokenizer(self.reverse_dict)
 
         self.roots = roots
         self.suffixes = suffixes
@@ -129,234 +135,8 @@ class TRTokenizer:
         
         return parts if parts else [(word.lower(), 0)]
 
-    def _starts_with_vowel(self, word: str) -> bool:
-        return word[0] in "aeıioöuü"
-
-    def _ends_with_vowel(self, word: str) -> bool:
-        return word[len(word) - 1] in "aeıioöuü"
-
-    def _ends_with_any(word: str, charset: str, k: int = 3) -> bool:
-        # Safely check last k chars; slicing handles short words gracefully
-        return any(c in charset for c in word[-k:]) if word else False
-
-    def _ends_with_ince(self, word: str) -> bool:
-        return self._ends_with_any(word, "eiöü")
-
-    def _ends_with_ai(self, word: str) -> bool:
-        return self._ends_with_any(word, "aı")
-
-    def _ends_with_ei(self, word: str) -> bool:
-        return self._ends_with_any(word, "ei")
-
-    def _ends_with_ou(self, word: str) -> bool:
-        return self._ends_with_any(word, "ou")
-    
-    def _ends_with_sert_unsuz(self, word: str) -> bool:
-        return word[len(word) - 1] in "fstkçşhp"
-
-    def _select_correct_suffix(self, i: int, ids: List[int]) -> str:
-        suffixes = self.reverse_dict[ids[i]]
-        if ids[i] < 20013 and i > 0:
-            prev_token = self.reverse_dict[ids[i - 1]][0]
-            if (prev_token == " " or prev_token == "\n" or prev_token == "\t") and i > 1:
-                prev_token = self.reverse_dict[ids[i - 2]][0]
-            if self._ends_with_ince(prev_token):
-                return suffixes[1]
-            return suffixes[0]
-        elif ids[i] < 20023 and i > 0: # nın, nin, nun, nün
-            prev_token = self.reverse_dict[ids[i - 1]][0]
-            if self._ends_with_ai(prev_token):
-                return suffixes[0]
-            elif self._ends_with_ei(prev_token):
-                return suffixes[1]
-            elif self._ends_with_ou(prev_token):
-                return suffixes[2]
-            return suffixes[3]
-        elif ids[i] == 20023 and i > 0: # la, le, yla, yle
-            prev_token = self.reverse_dict[ids[i - 1]][0]
-            if self._ends_with_vowel(prev_token):
-                if self._ends_with_ince(prev_token):
-                    return suffixes[3]
-                return suffixes[2]
-            elif self._ends_with_ince(prev_token):
-                return suffixes[1]
-            return suffixes[0]
-        elif ids[i] <= 20025  and i > 0: # da, de, ta, te, dan, den, tan, ten
-            prev_token = self.reverse_dict[ids[i - 1]][0]
-            if (prev_token == " " or prev_token == "\n" or prev_token == "\t") and i > 1:
-                prev_token = self.reverse_dict[ids[i - 2]][0]
-            if self._ends_with_sert_unsuz(prev_token):
-                if self._ends_with_ince(prev_token):
-                    return suffixes[3]
-                return suffixes[2]
-            if self._ends_with_ince(prev_token):
-                return suffixes[1]
-            return suffixes[0]
-        elif ids[i] > 20025 and ids[i] < 20029: # dı, di, du, dü, tı, ti, tu, tü, cı, ci, cu, cü, çı, çi, çu, çü
-            prev_token = self.reverse_dict[ids[i - 1]][0]
-            if self._ends_with_sert_unsuz(prev_token):
-                if self._ends_with_ai(prev_token):
-                    return suffixes[4]
-                elif self._ends_with_ei(prev_token):
-                    return suffixes[5]
-                elif self._ends_with_ou(prev_token):
-                    return suffixes[6]
-                return suffixes[7]
-            else:
-                if self._ends_with_ai(prev_token):
-                    return suffixes[0]
-                elif self._ends_with_ei(prev_token):
-                    return suffixes[1]
-                elif self._ends_with_ou(prev_token):
-                    return suffixes[2]
-                return suffixes[3]
-        elif ids[i] == 20029: # lık, lik, luk, lük, lığ, liğ, luğ, lüğ
-            prev_token = self.reverse_dict[ids[i - 1]][0]
-            next_token = self.reverse_dict[ids[i + 1]][0]
-            if self._starts_with_vowel(next_token):
-                if self._ends_with_ai(prev_token):
-                    return suffixes[4]
-                elif self._ends_with_ei(prev_token):
-                    return suffixes[5]
-                elif self._ends_with_ou(prev_token):
-                    return suffixes[6]
-                return suffixes[7]
-            else:
-                if self._ends_with_ai(prev_token):
-                    return suffixes[0]
-                elif self._ends_with_ei(prev_token):
-                    return suffixes[1]
-                elif self._ends_with_ou(prev_token):
-                    return suffixes[2]
-                return suffixes[3]
-        elif ids[i] == 20030: # cık, cik, cuk, cük, çık, çik, çuk, çük, cığ, ciğ, cuğ, cüğ, çığ, çiğ, çuğ, çüğ
-            prev_token = self.reverse_dict[ids[i - 1]][0]
-            next_token = self.reverse_dict[ids[i + 1]][0]
-            if self._starts_with_vowel(next_token):
-                if self._ends_with_sert_unsuz(prev_token):
-                    if self._ends_with_ai(prev_token):
-                        return suffixes[12]
-                    elif self._ends_with_ei(prev_token):
-                        return suffixes[13]
-                    elif self._ends_with_ou(prev_token):
-                        return suffixes[14]
-                    return suffixes[15]
-                else:
-                    if self._ends_with_ai(prev_token):
-                        return suffixes[8]
-                    elif self._ends_with_ei(prev_token):
-                        return suffixes[9]
-                    elif self._ends_with_ou(prev_token):
-                        return suffixes[10]
-                    return suffixes[11]
-            else:
-                if self._ends_with_sert_unsuz(prev_token):
-                    if self._ends_with_ai(prev_token):
-                        return suffixes[4]
-                    elif self._ends_with_ei(prev_token):
-                        return suffixes[5]
-                    elif self._ends_with_ou(prev_token):
-                        return suffixes[6]
-                    return suffixes[7]
-                else:
-                    if self._ends_with_ai(prev_token):
-                        return suffixes[0]
-                    elif self._ends_with_ei(prev_token):
-                        return suffixes[1]
-                    elif self._ends_with_ou(prev_token):
-                        return suffixes[2]
-                    return suffixes[3]
-        elif ids[i] == 20031: # mak, mek, may, mey
-            prev_token = self.reverse_dict[ids[i - 1]][0]
-            next_token = self.reverse_dict[ids[i + 1]][0]
-            if self._starts_with_vowel(next_token):
-                if self._ends_with_ince(prev_token):
-                    return suffixes[3]
-                return suffixes[2]
-            else:
-                if self._ends_with_ince(prev_token):
-                    return suffixes[1]
-                return suffixes[0]
-        elif ids[i] == 20032: # acak, ecek, acağ, eceğ, yacak, yecek, yacağ, yeceğ
-            prev_token = self.reverse_dict[ids[i - 1]][0]
-            next_token = self.reverse_dict[ids[i + 1]][0]
-            if self._starts_with_vowel(next_token):
-                if self._ends_with_vowel(prev_token):
-                    if self._ends_with_ince(prev_token):
-                        return suffixes[7]
-                    return suffixes[6]
-                else:
-                    if self._ends_with_ince(prev_token):
-                        return suffixes[3]
-                    return suffixes[2]
-            else:
-                if self._ends_with_vowel(prev_token):
-                    if self._ends_with_ince(prev_token):
-                        return suffixes[5]
-                    return suffixes[4]
-                else:
-                    if self._ends_with_ince(prev_token):
-                        return suffixes[1]
-                    return suffixes[0]
-        else:
-            return suffixes[0]
-
-    """ 
-    {
-        'üçlü, yumuşama ve ünsüz düşmesi': 100,
-        'ünlü-düşme': 110,
-        'yumuşama': 198,
-        'kalın-genişleme': 2080,
-        'ince-genişleme': 2223,
-        'yanlış eklenmiş': 2315
-    }
-    """
-    def _select_correct_root(self, i: int, ids: List[int]) -> str:
-        if ids[i] >= 100 and ids[i] < 2080 and i < len(ids) - 2:
-            next_token = self.reverse_dict[ids[i + 1]][0]
-            if self._starts_with_vowel(next_token):
-                return self.reverse_dict[ids[i]][1]
-            elif ids[i] <= 110 and ids[i + 1] == 20034: # cık, cik, ...
-                return self.reverse_dict[ids[i]][2]
-            else:
-                return self.reverse_dict[ids[i]][0]
-        elif ids[i] >= 2080 and ids[i] < 2315 and i < len(ids) - 2: # kalın-genişleme, ince-genişleme, ...
-            next_token = self.reverse_dict[ids[i + 1]][0]
-            if ids[i + 1] == 20021: # yor
-                return self.reverse_dict[ids[i]][1]
-            else:
-                return self.reverse_dict[ids[i]][0]
-        else:
-            return self.reverse_dict[ids[i]][0]
-
-
     def decode(self, ids: List[int]) -> str:
-        text = ""
-        i = 0
-        while i < len(ids):
-            if ids[i] == 0 and i < len(ids) - 1: # uppercase
-                # get the token is uppercase then uppercase the next token's first letter
-                token = self.reverse_dict[ids[i + 1]][0]
-                text += token.capitalize()
-                i += 1
-            elif ids[i] == 1: # space
-                text += " "
-            elif ids[i] == 2: # newline
-                text += "\n"
-            elif ids[i] == 3: # tab
-                text += "\t"
-            elif ids[i] == 4: # unknown
-                text += "▁u▁"
-            elif ids[i] in self.reverse_dict:
-                tokens = self.reverse_dict[ids[i]]
-                if len(tokens) > 1 and i > 0:
-                    if ids[i] < 20000: # if the token is a root
-                        text += self._select_correct_root(i, ids)
-                    else: # token is a suffix since bpe tokens are single tokens
-                        text += self._select_correct_suffix(i, ids)
-                else:
-                    text += tokens[0]
-            else:
-                text += "▁"
-            i += 1
-        return text
+        return TRDecoder(self.reverse_dict).decode(ids)
+    
+    def gpt_decode(self, ids: List[int]) -> str:
+        return self.gpt_decoder.decode(ids)
