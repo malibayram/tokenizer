@@ -1,3 +1,4 @@
+import argparse
 import json
 from enum import Enum
 from typing import Dict, List, Optional, Tuple
@@ -45,8 +46,8 @@ class TRTokenizer:
         self.max_bpe_len = max(len(k) for k in bpe_tokens) if bpe_tokens else 0
         
         self.uppercase_marker = {"token": "<uppercase>", "id": 0, "type": TokenType.ROOT}
-        self.space_marker = {"token": "<space>", "id": 1, "type": TokenType.ROOT}
-        self.unknown_marker = {"token": "<unknown>", "id": 4, "type": TokenType.ROOT}
+        self.unknown_marker = {"token": "<unknown>", "id": 1, "type": TokenType.ROOT}
+        self.space_marker = {"token": " ", "id": 2, "type": TokenType.ROOT}
 
     def _tokenize_word(self, word: str) -> Tuple[List[dict], List[int]]:
         uppercase_indices = [i for i, c in enumerate(word) if c.isupper()]
@@ -140,3 +141,24 @@ class TRTokenizer:
     
     def gpt_decode(self, ids: List[int]) -> str:
         return self.gpt_decoder.decode(ids)
+    
+
+def main(text: str = ""):
+    tokenizer = TRTokenizer()
+    if text == "":
+        text = """
+        Bugün Ali, sabah erken saatte İstanbul’un sakin bir köyünün kıyısındaki eski evinin kapısını yavaşça açıp bahçeye çıktı. Kitaptan not aldığı fikrini deftere yazdı ve “Bu projenin aşamaları uç uca eklenecek, sonra rapor olarak tek tek sunulacak,” dedi. Öğleye doğru kulüpte kısa bir toplantı yaptı; şefle ve arkadaşıyla yüz yüze görüşüp gelişecek işleri ayrıntılıca konuştu.
+        Toplantıdan sonra taslağı evde tamamlayacak işleri listeleyecek ve yapacağı deneyleri planlayacaktı; ancak ağaçtan düşen küçücük bir dalcık ayağına değince bahçede kalıp ölçümleri bitirmeyi seçti. Yorgunluğu artınca, “Bu metnin ilk bölümünü kısacık tutayım, sonra uzunca açıklayayım,” diye düşündü.
+        Akşamüstü arabacı komşusunun getirdiği parçalık malzemeyi atölyede denedi; taşçı ustanın önerisiyle küçücük delikleri büyütüp ince ayarlı bir ölçümcük daha ekledi. Nihayet geliyor gibi görünen sonuçlar onu sevindirdi; “Bu verilerin çoğunu yarın yeniden deneyip doğrulayacağım; yapmayıp beklersem geçecek zamanı boşa harcamış olurum,” dedi.
+        """
+    ids = tokenizer.encode(text)
+    print(ids)
+    print(tokenizer.decode(ids))
+    print(tokenizer.gpt_decode(ids))
+
+if __name__ == "__main__":
+    # get args
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--text", "-t", type=str, default="")
+    args = parser.parse_args()
+    main(args.text)

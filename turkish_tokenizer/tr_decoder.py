@@ -22,63 +22,42 @@ class TRDecoder:
         """Check if word ends with a vowel."""
         return word and word[-1] in self.ALL_VOWELS
 
-    def _ends_with_any(self, word: str, charset: str, k: int = 3) -> bool:
-        """Check if any of the last k characters are in charset."""
-        return bool(word) and any(c in charset for c in word[-k:])
+    def _ends_with_any(self, word: str, charset: str) -> bool:
+       # recursively check until first vowel starts from the end       
+       i = len(word) - 1
+       while i >= 0:
+           if word[i] in charset:
+               return True
+           if word[i] in self.ALL_VOWELS:
+               return False
+           i -= 1
+       return False
 
     def _ends_with_ince(self, word: str) -> bool:
         """Check if word ends with front vowels (ince ünlü)."""
+        if word in ("saat", "kilovatsaat", "ziraat"):
+            return True
+        # check until first vowel recursively
         return self._ends_with_any(word, self.INCE_VOWELS)
 
-    def _ends_with_ai(self, word: str) -> bool:
-        """Check if word ends with 'a' or 'ı' vowels."""
-        return self._ends_with_any(word, self.AI_VOWELS)
-
-    def _ends_with_ei(self, word: str) -> bool:
-        """Check if word ends with 'e' or 'i' vowels."""
-        return self._ends_with_any(word, self.EI_VOWELS)
-
-    def _ends_with_ou(self, word: str) -> bool:
-        """Check if word ends with 'o' or 'u' vowels."""
-        return self._ends_with_any(word, self.OU_VOWELS)
-    
     def _ends_with_sert_unsuz(self, word: str) -> bool:
         """Check if word ends with a hard consonant."""
         return word and word[-1] in self.HARD_CONSONANTS
 
-    def _get_prev_token(self, i: int, ids: List[int]) -> str:
-        """Get the previous meaningful token, skipping whitespace."""
-        if i == 0:
-            return ""
-        
-        prev_token = self.reverse_dict[ids[i - 1]][0]
-        
-        # Skip whitespace tokens and get the token before them
-        if prev_token in self.WHITESPACE and i > 1:
-            prev_token = self.reverse_dict[ids[i - 2]][0]
-        
-        return prev_token
-
     def _get_vowel_suffix_index(self, prev_token: str) -> int:
         """Get suffix index based on vowel harmony rules."""
-        if self._ends_with_ai(prev_token):
+        if self._ends_with_any(prev_token, self.AI_VOWELS):
             return 0
-        elif self._ends_with_ei(prev_token):
+        elif self._ends_with_any(prev_token, self.EI_VOWELS):
             return 1
-        elif self._ends_with_ou(prev_token):
+        elif self._ends_with_any(prev_token, self.OU_VOWELS):
             return 2
         return 3
 
-    def _select_correct_suffix(self, i: int, ids: List[int]) -> str:
+    def _select_correct_suffix(self, i: int, ids: List[int], prev_token: str) -> str:
         """Select the correct suffix based on morphological rules."""
         suffixes = self.reverse_dict[ids[i]]
-        token_id = ids[i]
-        
-        if i == 0:  # No previous token
-            return suffixes[0]
-
-        prev_token = self._get_prev_token(i, ids)
-        
+        token_id = ids[i]        
         # Handle different suffix types with cleaner logic
         if token_id < 20013:
             # Basic suffix selection based on vowel harmony
@@ -88,7 +67,12 @@ class TRDecoder:
             return suffixes[self._get_vowel_suffix_index(prev_token)]
             
         elif token_id == 20023:  # la, le, yla, yle
-            return self._handle_la_le_suffix(prev_token, suffixes)
+            end_of_word = True
+            if i < len(ids) - 1:
+                next_token = self.reverse_dict[ids[i + 1]][0]
+                if next_token not in self.WHITESPACE:
+                    end_of_word = False
+            return self._handle_la_le_suffix(prev_token, suffixes, end_of_word)
             
         elif token_id <= 20025:  # da, de, ta, te, dan, den, tan, ten
             return self._handle_da_de_suffix(prev_token, suffixes)
@@ -110,9 +94,9 @@ class TRDecoder:
             
         return suffixes[0]
 
-    def _handle_la_le_suffix(self, prev_token: str, suffixes: List[str]) -> str:
+    def _handle_la_le_suffix(self, prev_token: str, suffixes: List[str], end_of_word: bool) -> str:
         """Handle la/le/yla/yle suffix selection."""
-        if self._ends_with_vowel(prev_token):
+        if self._ends_with_vowel(prev_token) and end_of_word:
             return suffixes[3] if self._ends_with_ince(prev_token) else suffixes[2]
         else:
             return suffixes[1] if self._ends_with_ince(prev_token) else suffixes[0]
@@ -121,8 +105,7 @@ class TRDecoder:
         """Handle da/de/ta/te suffix selection."""
         if self._ends_with_sert_unsuz(prev_token):
             return suffixes[3] if self._ends_with_ince(prev_token) else suffixes[2]
-        else:
-            return suffixes[1] if self._ends_with_ince(prev_token) else suffixes[0]
+        return suffixes[1] if self._ends_with_ince(prev_token) else suffixes[0]
 
     def _handle_di_du_suffix(self, prev_token: str, suffixes: List[str]) -> str:
         """Handle dı/di/du/dü suffix selection."""
@@ -164,13 +147,13 @@ class TRDecoder:
 
     def _handle_acak_suffix(self, i: int, ids: List[int], prev_token: str, suffixes: List[str]) -> str:
         """Handle acak/ecek/yacak/yecek suffix selection."""
-        if i >= len(ids) - 1:
-            return suffixes[0]
-        
-        next_token = self.reverse_dict[ids[i + 1]][0]
         is_vowel_ending = self._ends_with_vowel(prev_token)
         is_ince = self._ends_with_ince(prev_token)
-        is_vowel_starting = self._starts_with_vowel(next_token)
+
+        is_vowel_starting = False
+        if i < len(ids) - 1:
+          next_token = self.reverse_dict[ids[i + 1]][0]
+          is_vowel_starting = self._starts_with_vowel(next_token)
         
         if is_vowel_starting:
             if is_vowel_ending:
@@ -218,20 +201,13 @@ class TRDecoder:
         
         while i < len(ids):
             token_id = ids[i]
-            
             # Handle special tokens
             if token_id == 0 and i < len(ids) - 1:  # uppercase
                 next_token = self.reverse_dict[ids[i + 1]][0]
                 text_parts.append(next_token.capitalize())
                 i += 2
                 continue
-            elif token_id == 1:  # space
-                text_parts.append(" ")
-            elif token_id == 2:  # newline
-                text_parts.append("\n")
-            elif token_id == 3:  # tab
-                text_parts.append("\t")
-            elif token_id == 4:  # unknown
+            elif token_id == 1:  # unknown
                 text_parts.append("▁u▁")
             elif token_id in self.reverse_dict:
                 tokens = self.reverse_dict[token_id]
@@ -239,12 +215,19 @@ class TRDecoder:
                     if token_id < 20000:  # root token
                         text_parts.append(self._select_correct_root(i, ids))
                     else:  # suffix token
-                        text_parts.append(self._select_correct_suffix(i, ids))
+                        j = -1
+                        prev_token = text_parts[j]
+                        # while prev_token is not a word, get the previous token
+                        while not prev_token.isalpha() and j > -len(text_parts):
+                            prev_token = text_parts[j]
+                            j -= 1
+                        text_parts.append(self._select_correct_suffix(i, ids, prev_token))
                 else:
                     text_parts.append(tokens[0])
             else:
                 text_parts.append("▁")
             
+            print(i, text_parts)
             i += 1
         
         return "".join(text_parts)

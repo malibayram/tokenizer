@@ -229,12 +229,6 @@ class TRGPTTokenizer:
                 i += 2
                 continue
 
-            if tid == self.T_SPACE:
-                text.append(" "); i += 1; continue
-            if tid == self.T_NEWLINE:
-                text.append("\n"); i += 1; continue
-            if tid == self.T_TAB:
-                text.append("\t"); i += 1; continue
             if tid == self.T_UNKNOWN:
                 text.append("▁u▁"); i += 1; continue
 
