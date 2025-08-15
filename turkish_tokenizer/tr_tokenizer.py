@@ -147,9 +147,7 @@ def main(text: str = ""):
     tokenizer = TRTokenizer()
     if text == "":
         text = """
-        Bugün Ali, sabah erken saatte İstanbul’un sakin bir köyünün kıyısındaki eski evinin kapısını yavaşça açıp bahçeye çıktı. Kitaptan not aldığı fikrini deftere yazdı ve “Bu projenin aşamaları uç uca eklenecek, sonra rapor olarak tek tek sunulacak,” dedi. Öğleye doğru kulüpte kısa bir toplantı yaptı; şefle ve arkadaşıyla yüz yüze görüşüp gelişecek işleri ayrıntılıca konuştu.
-        Toplantıdan sonra taslağı evde tamamlayacak işleri listeleyecek ve yapacağı deneyleri planlayacaktı; ancak ağaçtan düşen küçücük bir dalcık ayağına değince bahçede kalıp ölçümleri bitirmeyi seçti. Yorgunluğu artınca, “Bu metnin ilk bölümünü kısacık tutayım, sonra uzunca açıklayayım,” diye düşündü.
-        Akşamüstü arabacı komşusunun getirdiği parçalık malzemeyi atölyede denedi; taşçı ustanın önerisiyle küçücük delikleri büyütüp ince ayarlı bir ölçümcük daha ekledi. Nihayet geliyor gibi görünen sonuçlar onu sevindirdi; “Bu verilerin çoğunu yarın yeniden deneyip doğrulayacağım; yapmayıp beklersem geçecek zamanı boşa harcamış olurum,” dedi.
+        Zehra Öney ve Çiçek Çizmeci’yle yapay zekâ konuştuk. Bu sohbeti çektiğimiz tarihte olan o3 artık yok; onun yerine "ChatGPT 5 Thinking" dediğimi varsayın:
         """
     ids = tokenizer.encode(text)
     print(ids)

@@ -35,7 +35,7 @@ class TRDecoder:
 
     def _ends_with_ince(self, word: str) -> bool:
         """Check if word ends with front vowels (ince ünlü)."""
-        if word in ("saat", "kilovatsaat", "ziraat"):
+        if word in ("saat", "kilovatsaat", "ziraat", "itaat"):
             return True
         # check until first vowel recursively
         return self._ends_with_any(word, self.INCE_VOWELS)
@@ -227,7 +227,6 @@ class TRDecoder:
             else:
                 text_parts.append("▁")
             
-            print(i, text_parts)
             i += 1
         
         return "".join(text_parts)
