@@ -1,285 +1,218 @@
-# Turkish Tokenizer
+# Tokenizer Research Project
 
-[![PyPI version](https://badge.fury.io/py/turkish-tokenizer.svg)](https://badge.fury.io/py/turkish-tokenizer)
-[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/release/python-380/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+A comprehensive research project focused on developing advanced tokenization methods for the Turkish language, incorporating linguistic rules, morphological analysis, and semantic understanding.
 
-Dilbilim kurallarını temel alarak, çok dilli metinleri işlemek ve anlam bütünlüğünü korumak için gelişmiş bir tokenizer altyapısı.
+## Project Overview
 
-## Kurulum
+This project explores multiple approaches to Turkish text tokenization, combining traditional NLP techniques with modern machine learning methods. The goal is to create tokenizers that understand Turkish morphology and semantics, leading to better performance in downstream NLP tasks.
 
-### PyPI üzerinden kurulum (Önerilen)
+## Key Features
+
+- **Semantic Tokenization**: Converts Turkish morphological suffixes to language-independent semantic tokens
+- **Morphological Analysis**: Root-suffix separation using Turkish grammatical rules
+- **Grammatical Event Reversal**: Handles Turkish phonological processes (vowel harmony, consonant softening, etc.)
+- **BPE Integration**: Modern subword tokenization with Turkish-specific preprocessing
+- **Multiple Tokenizer Implementations**: Various approaches for different use cases
+
+## Project Structure
+
+### 🧠 semantic_tokenizer/
+
+Semantic tokenization approach that focuses on meaning preservation through grammatical analysis.
+
+**Key Components:**
+
+- Grammatical Event Revertor (GER) - Reverses Turkish phonological changes
+- Semantic Converter - Maps suffixes to language-independent tokens
+- Root extraction and phonological process handling
+
+**Main Files:**
+
+- `guncel_strateji.md` - Current strategy documentation
+- `tokenizer_v01.ipynb` - Main implementation notebook
+- Various JSON files containing roots, suffixes, and mappings
+
+### 🔧 tr_tokenizer/
+
+Turkish word segmentation tool using morphological analysis with ITU NLP tools integration.
+
+**Key Components:**
+
+- Root-suffix separation using linguistic rules
+- ITU NLP tools integration for morphological analysis
+- Frequency-based vocabulary building
+- GUI interface for interactive use
+
+**Main Files:**
+
+- `kelime_bol.py` - Core word segmentation algorithm
+- `kokbul.py` - Root finding utilities
+- `gui/` - Graphical user interface
+- `veri/` - Training data and word lists
+
+### 📚 tokenizer_preparation/
+
+BPE (Byte Pair Encoding) tokenizer training and preparation pipeline.
+
+**Key Components:**
+
+- Custom BPE tokenizer training
+- Frequency analysis and vocabulary optimization
+- Integration with Hugging Face tokenizers
+- Performance evaluation tools
+
+**Main Files:**
+
+- `train_tokenizer.py` - Training pipeline
+- `byte_pair_tokenizer.ipynb` - BPE implementation
+- Various JSON tokenizer configurations
+
+## Quick Start
+
+### Prerequisites
+
+Install the required dependencies:
 
 ```bash
-pip install turkish-tokenizer
+pip install -r requirements.txt
 ```
 
-### Geliştirme için kurulum
+### Basic Usage
 
-```bash
-git clone https://github.com/malibayram/tokenizer.git
-cd tokenizer
-pip install -e .
-```
-
-## Hızlı Başlangıç
-
-### Temel Tokenizer Kullanımı
+#### Semantic Tokenizer
 
 ```python
-from turkish_tokenizer import TRTokenizer
+# Navigate to semantic_tokenizer directory
+cd semantic_tokenizer
 
-# Tokenizer'ı başlat
-tokenizer = TRTokenizer()
-
-# Metin tokenizasyonu
-text = "Merhaba dünya! Nasılsınız?"
-tokens = tokenizer.encode(text)
-print("Token IDs:", tokens)
-
-# Token'ları metne geri çevir
-decoded_text = tokenizer.decode(tokens)
-print("Decoded:", decoded_text)
+# Open the main notebook
+jupyter notebook tokenizer_v01.ipynb
 ```
 
-### Gelişmiş Tokenizasyon
+#### TR Tokenizer
 
 ```python
-from turkish_tokenizer import TRTokenizer
+from tr_tokenizer.kelime_bol import kok_tara
 
-# Tokenizer'ı başlat
-tokenizer = TRTokenizer()
-
-# Tokenları string olarak al
-text = "Kitapları masa üzerinde bıraktım."
-tokens = tokenizer.tokenize(text)
-print("Tokens:", tokens)
-
-# Token tiplerini öğren
-token_details, _ = tokenizer.tokenize_text(text)
-for token in token_details:
-    print(f"Token: '{token['token']}', ID: {token['id']}, Type: {token['type']}")
+# Analyze a Turkish word
+word = "kitaplarımızdan"
+result = kok_tara(word)
+print(f"Analysis: {result}")
 ```
 
-## İlk Versiyon
+#### BPE Tokenizer Training
 
-- [x] Kelime köklerinin ses olayına uğramış olan hallerinin ses olayına uğramamış olan halleri ile aynı id ile temsil edilmesi
-- [x] İlkHarfBüyük tokeni oluşturulması ve tüm tokenlerin ilk harfinin küçük harfe çevrilmesi
-- [x] Çoğul tokeni oluşturulması ve ler - lar eklerinin silinmesi
-- [x] Tamamen aynı olan ama sesleri farklı olan eklerin özel tokenler ile temsil edilmesi
-- [x] Boşluk, satır sonu ve tab karakterlerinin özel tokenler ile temsil edilmesi
+```python
+# Navigate to tokenizer_preparation directory
+cd tokenizer_preparation
 
-## Gelecek Özellikler
+# Run the training script
+python train_tokenizer.py
+```
 
-- [ ] Çok dilli destek
-- [ ] Performans optimizasyonları
-- [ ] Daha kapsamlı test senaryoları
-- [ ] Web API desteği
-- [ ] Docker entegrasyonu
+## Research Methodology
+
+### 1. Semantic Tokenization Approach
+
+The semantic tokenizer implements a two-step process:
+
+1. **Grammatical Event Reversal**: Identifies and reverses Turkish phonological processes
+
+   - Vowel contraction (Ünlü Daralması)
+   - Vowel dropping (Ünlü Düşmesi)
+   - Consonant softening (Ünsüz Yumuşaması)
+   - And other Turkish-specific sound changes
+
+2. **Semantic Conversion**: Maps morphological suffixes to semantic tokens
+   - Language-independent representation
+   - Meaning preservation across different surface forms
+
+**Example:**
+
+```
+geldiği → gel (root) + di (past) + ğ (welding) + i (possessive)
+        → gel + <past-suffix> + <possessive-suffix>
+```
+
+### 2. Morphological Analysis Approach
+
+Uses rule-based morphological analysis combined with statistical methods:
+
+- Root identification using comprehensive Turkish root dictionaries
+- Suffix segmentation based on Turkish morphological rules
+- Integration with ITU NLP tools for validation
+- Frequency-based vocabulary optimization
+
+### 3. BPE Integration
+
+Combines traditional BPE with Turkish-specific preprocessing:
+
+- Morphology-aware subword segmentation
+- Custom vocabulary with high-frequency Turkish roots and suffixes
+- Integration with modern transformer tokenizers
+
+## Technical Implementation
+
+### Data Sources
+
+- Turkish Wikipedia corpus
+- ITU Turkish NLP datasets
+- Custom root and suffix dictionaries
+- Frequency-analyzed word lists
+
+### Key Algorithms
+
+- Longest root matching for morphological segmentation
+- Phonological rule application for surface form generation
+- BPE training with linguistic constraints
+- Semantic mapping for cross-lingual representation
+
+## Research Applications
+
+This tokenizer project supports research in:
+
+- **Machine Translation**: Better handling of Turkish morphology
+- **Language Modeling**: Improved representation of Turkish text
+- **Cross-lingual NLP**: Semantic token mapping across languages
+- **Morphological Analysis**: Automated Turkish text analysis
+
+## Development Status
+
+This is an active research project with ongoing development in multiple areas:
+
+- ✅ Basic morphological segmentation
+- ✅ Semantic token mapping for common suffixes
+- ✅ BPE tokenizer training pipeline
+- ✅ GUI interface for interactive analysis
+- 🔄 Cross-lingual semantic mapping
+- 🔄 Performance optimization
+- 🔄 Comprehensive evaluation metrics
+
+## Contributing
+
+This is a research project. For collaboration or questions:
+
+1. Review the methodology in `semantic_tokenizer/guncel_strateji.md`
+2. Examine the implementation notebooks
+3. Check the current development status in individual README files
+
+## Technical Requirements
+
+- Python 3.8+
+- Jupyter Notebook
+- NumPy, Pandas for data processing
+- PyTorch for neural components
+- Transformers library for modern tokenizer integration
+
+## Research Context
+
+This project contributes to the field of morphologically rich language processing, specifically addressing challenges in Turkish NLP:
+
+- Agglutinative morphology handling
+- Semantic representation across morphological variants
+- Integration of linguistic knowledge with statistical methods
+- Cross-lingual semantic mapping for multilingual applications
 
 ---
 
-## Projenin Amacı ve Kapsamı
-
-Bu projenin amacı, metin analizi ve doğal dil işleme (NLP) süreçlerinde kullanılabilecek, dilbilgisel yapıları ve anlam bütünlüğünü dikkate alan bir tokenizer geliştirmektir. Proje, Türkçe dilbilgisi kurallarını referans alarak başlamış olsa da, evrensel dil kuralları doğrultusunda çok dilli bir yapıya sahip olacak şekilde genişletilecektir.
-
-## Temel Özellikler
-
-- Dilbilim kurallarına dayalı tokenizasyon
-- Morfolojik analiz desteği
-- Çok dilli destek altyapısı
-- Genişletilebilir mimari
-- Yüksek performanslı işleme
-- Özel karakter ve boşluk işleme desteği
-
-## Dosya Yapısı
-
-Tokenizer üç temel sözlük dosyası kullanır:
-
-- `kokler_v05.json`: Kök kelimeler ve özel tokenler (0-20000 arası ID'ler)
-- `ekler_v05.json`: Ekler (22268-22767 arası ID'ler)
-- `bpe_v05.json`: BPE token'ları
-
-### Özel Tokenler
-
-```json
-{
-  "<uppercase>": 0, // Büyük harf işareti
-  "<space>": 1, // Boşluk karakteri
-  "<newline>": 2, // Satır sonu
-  "<tab>": 3, // Tab karakteri
-  "<unknown>": 4 // Bilinmeyen token
-}
-```
-
-## Kullanım
-
-### Python Implementasyonu
-
-```python
-from turkish_tokenizer import tokenize
-
-text = "Kitabı ve defterleri getirn,\nYouTube\t"
-result = tokenize(text)
-print(result)
-```
-
-### Rust Implementasyonu
-
-```rust
-use turkish_tokenizer::TurkishTokenizer;
-
-fn main() {
-    let mut tokenizer = TurkishTokenizer::new().unwrap();
-    let text = "Kitabı ve defterleri getirn,\nYouTube\t";
-    let result = tokenizer.tokenize(text).unwrap();
-    println!("{}", serde_json::to_string_pretty(&result).unwrap());
-}
-```
-
-## Implementasyon Özellikleri
-
-### Python Versiyonu
-
-1. **Temel Özellikler**:
-
-   - Basit ve anlaşılır kod yapısı
-   - Kolay entegrasyon
-   - Hızlı prototipleme için uygun
-   - Dinamik tip sistemi
-
-2. **Performans Özellikleri**:
-   - Sıralı işleme
-   - Bellek dostu veri yapıları
-   - Yorumlanmış dil avantajları
-
-### Rust Versiyonu
-
-1. **Temel Özellikler**:
-
-   - Güvenli bellek yönetimi
-   - Statik tip sistemi
-   - Thread-safe veri yapıları
-   - Sıfır maliyetli soyutlamalar
-
-2. **Performans Özellikleri**:
-
-   - Paralel işleme desteği (Rayon)
-   - Verimli UTF-8 karakter işleme
-   - Düşük seviye optimizasyonlar
-   - Önbellekleme mekanizmaları
-
-3. **Teknik Detaylar**:
-   - Arc ile thread-safe paylaşımlı veri
-   - Regex ile gelişmiş kelime bölümleme
-   - Lazy static ile verimli statik kaynaklar
-   - Zero-copy string işlemleri
-
-## Geliştirme ve Katkıda Bulunma
-
-### Geliştirme Ortamı Kurulumu
-
-1. Repository'yi klonlayın:
-
-```bash
-git clone <repository-url>
-cd tokenizer
-```
-
-2. Python ortamını hazırlayın:
-
-```bash
-python -m venv venv
-source venv/bin/activate  # Unix/macOS
-# veya
-.\venv\Scripts\activate  # Windows
-```
-
-3. Rust toolchain'i kurun:
-
-```bash
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-# veya
-rustup update
-```
-
-### Geliştirme Süreci
-
-1. Yeni bir branch oluşturun:
-
-```bash
-git checkout -b feature/yeni-ozellik
-```
-
-2. Testleri çalıştırın:
-
-```bash
-# Python testleri
-python -m pytest tests/
-
-# Rust testleri
-cargo test
-```
-
-3. Kod stilini kontrol edin:
-
-```bash
-# Python
-flake8 .
-black .
-
-# Rust
-cargo fmt
-cargo clippy
-```
-
-4. Değişikliklerinizi commit edin:
-
-```bash
-git add .
-git commit -m "feat: yeni özellik eklendi"
-```
-
-### Pull Request Süreci
-
-1. Branch'inizi push edin:
-
-```bash
-git push origin feature/yeni-ozellik
-```
-
-2. GitHub üzerinden pull request açın
-3. Code review sürecini takip edin
-4. Gerekli düzeltmeleri yapın
-5. PR'ınız onaylandığında main branch'e merge edilecektir
-
-### Geliştirme Gereksinimleri
-
-#### Python
-
-- Python 3.6+
-- pytest
-- black
-- flake8
-- JSON desteği
-- UTF-8 karakter desteği
-
-#### Rust
-
-- Rust 1.50+
-- Cargo paket yöneticisi
-- rustfmt
-- clippy
-- Bağımlılıklar:
-  - serde (JSON işleme)
-  - rayon (paralel işleme)
-  - regex (kelime bölümleme)
-  - lazy_static (statik kaynaklar)
-
-## Lisans
-
-MIT
-
----
-
-**Not:** Proje aktif geliştirme aşamasındadır. Detaylı dokümantasyon için [Wiki](wiki) sayfasını ziyaret edebilirsiniz.
+**Note**: This is a research project focused on advancing Turkish language processing. The implementations are experimental and designed for research purposes.
