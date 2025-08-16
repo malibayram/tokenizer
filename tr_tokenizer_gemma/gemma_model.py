@@ -7,7 +7,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from tr_tokenizer import TRTokenizer
+from .tr_tokenizer import TRTokenizer
 
 
 class AttentionType(enum.Enum):

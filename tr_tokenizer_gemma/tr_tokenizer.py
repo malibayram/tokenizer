@@ -2,7 +2,7 @@ import json
 from enum import Enum
 from typing import Dict, List, Optional, Tuple
 
-from tr_decoder import TRDecoder
+from .tr_decoder import TRDecoder
 
 
 class TokenType(Enum):

@@ -1,10 +1,10 @@
-# Turkish Tokenizer with Gemma Model
+# Turkish Tokenizer
 
 [![PyPI version](https://badge.fury.io/py/turkish-tokenizer.svg)](https://badge.fury.io/py/turkish-tokenizer)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/release/python-380/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Dilbilim kurallarını temel alarak, çok dilli metinleri işlemek ve anlam bütünlüğünü korumak için gelişmiş bir tokenizer altyapısı. Bu paket ayrıca Türkçe için özel olarak optimize edilmiş Gemma model implementasyonu içerir.
+Dilbilim kurallarını temel alarak, çok dilli metinleri işlemek ve anlam bütünlüğünü korumak için gelişmiş bir tokenizer altyapısı.
 
 ## Kurulum
 
@@ -42,23 +42,23 @@ decoded_text = tokenizer.decode(tokens)
 print("Decoded:", decoded_text)
 ```
 
-### Gemma Model ile Metin Üretimi
+### Gelişmiş Tokenizasyon
 
 ```python
-from tr_tokenizer_gemma import GemmaForCausalLM, get_config_for_270m_tr_tokenizer, TRTokenizer
-import torch
+from tr_tokenizer_gemma import TRTokenizer
 
-# Model konfigürasyonu
-config = get_config_for_270m_tr_tokenizer("float32")
+# Tokenizer'ı başlat
 tokenizer = TRTokenizer()
 
-# Model'i başlat
-model = GemmaForCausalLM(config, tokenizer)
+# Tokenları string olarak al
+text = "Kitapları masa üzerinde bıraktım."
+tokens = tokenizer.tokenize(text)
+print("Tokens:", tokens)
 
-# Metin üret
-prompt = "Merhaba, bugün hava"
-generated_text = model.generate(prompt, device="cpu", output_len=50)
-print("Generated:", generated_text)
+# Token tiplerini öğren
+token_details, _ = tokenizer.tokenize_text(text)
+for token in token_details:
+    print(f"Token: '{token['token']}', ID: {token['id']}, Type: {token['type']}")
 ```
 
 ## İlk Versiyon

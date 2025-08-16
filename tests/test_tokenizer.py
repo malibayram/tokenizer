@@ -8,7 +8,7 @@ import pytest
 def test_import():
     """Test that the package can be imported successfully."""
     try:
-        from tr_tokenizer_gemma import GemmaForCausalLM, TRTokenizer
+        from tr_tokenizer_gemma import TRTokenizer
         assert True
     except ImportError as e:
         pytest.fail(f"Import failed: {e}")
