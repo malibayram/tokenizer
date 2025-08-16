@@ -1,8 +1,68 @@
-# Tokenizer
+# Turkish Tokenizer with Gemma Model
 
-Dilbilim kurallarını temel alarak, çok dilli metinleri işlemek ve anlam bütünlüğünü korumak için gelişmiş bir tokenizer altyapısı.
+[![PyPI version](https://badge.fury.io/py/turkish-tokenizer.svg)](https://badge.fury.io/py/turkish-tokenizer)
+[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/release/python-380/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+Dilbilim kurallarını temel alarak, çok dilli metinleri işlemek ve anlam bütünlüğünü korumak için gelişmiş bir tokenizer altyapısı. Bu paket ayrıca Türkçe için özel olarak optimize edilmiş Gemma model implementasyonu içerir.
+
+## Kurulum
+
+### PyPI üzerinden kurulum (Önerilen)
+
+```bash
+pip install turkish-tokenizer
+```
+
+### Geliştirme için kurulum
+
+```bash
+git clone https://github.com/malibayram/tokenizer.git
+cd tokenizer
+pip install -e .
+```
+
+## Hızlı Başlangıç
+
+### Temel Tokenizer Kullanımı
+
+```python
+from tr_tokenizer_gemma import TRTokenizer
+
+# Tokenizer'ı başlat
+tokenizer = TRTokenizer()
+
+# Metin tokenizasyonu
+text = "Merhaba dünya! Nasılsınız?"
+tokens = tokenizer.encode(text)
+print("Token IDs:", tokens)
+
+# Token'ları metne geri çevir
+decoded_text = tokenizer.decode(tokens)
+print("Decoded:", decoded_text)
+```
+
+### Gemma Model ile Metin Üretimi
+
+```python
+from tr_tokenizer_gemma import GemmaForCausalLM, get_config_for_270m_tr_tokenizer, TRTokenizer
+import torch
+
+# Model konfigürasyonu
+config = get_config_for_270m_tr_tokenizer("float32")
+tokenizer = TRTokenizer()
+
+# Model'i başlat
+model = GemmaForCausalLM(config, tokenizer)
+
+# Metin üret
+prompt = "Merhaba, bugün hava"
+generated_text = model.generate(prompt, device="cpu", output_len=50)
+print("Generated:", generated_text)
+```
 
 ## İlk Versiyon
+
 - [x] Kelime köklerinin ses olayına uğramış olan hallerinin ses olayına uğramamış olan halleri ile aynı id ile temsil edilmesi
 - [x] İlkHarfBüyük tokeni oluşturulması ve tüm tokenlerin ilk harfinin küçük harfe çevrilmesi
 - [x] Çoğul tokeni oluşturulması ve ler - lar eklerinin silinmesi
@@ -10,6 +70,7 @@ Dilbilim kurallarını temel alarak, çok dilli metinleri işlemek ve anlam büt
 - [x] Boşluk, satır sonu ve tab karakterlerinin özel tokenler ile temsil edilmesi
 
 ## Gelecek Özellikler
+
 - [ ] Çok dilli destek
 - [ ] Performans optimizasyonları
 - [ ] Daha kapsamlı test senaryoları
@@ -34,24 +95,27 @@ Bu projenin amacı, metin analizi ve doğal dil işleme (NLP) süreçlerinde kul
 ## Dosya Yapısı
 
 Tokenizer üç temel sözlük dosyası kullanır:
+
 - `kokler_v05.json`: Kök kelimeler ve özel tokenler (0-20000 arası ID'ler)
 - `ekler_v05.json`: Ekler (22268-22767 arası ID'ler)
 - `bpe_v05.json`: BPE token'ları
 
 ### Özel Tokenler
+
 ```json
 {
-    "<uppercase>": 0,    // Büyük harf işareti
-    "<space>": 1,       // Boşluk karakteri
-    "<newline>": 2,     // Satır sonu
-    "<tab>": 3,         // Tab karakteri
-    "<unknown>": 4      // Bilinmeyen token
+  "<uppercase>": 0, // Büyük harf işareti
+  "<space>": 1, // Boşluk karakteri
+  "<newline>": 2, // Satır sonu
+  "<tab>": 3, // Tab karakteri
+  "<unknown>": 4 // Bilinmeyen token
 }
 ```
 
 ## Kullanım
 
 ### Python Implementasyonu
+
 ```python
 from turkish_tokenizer import tokenize
 
@@ -61,6 +125,7 @@ print(result)
 ```
 
 ### Rust Implementasyonu
+
 ```rust
 use turkish_tokenizer::TurkishTokenizer;
 
@@ -75,7 +140,9 @@ fn main() {
 ## Implementasyon Özellikleri
 
 ### Python Versiyonu
+
 1. **Temel Özellikler**:
+
    - Basit ve anlaşılır kod yapısı
    - Kolay entegrasyon
    - Hızlı prototipleme için uygun
@@ -87,13 +154,16 @@ fn main() {
    - Yorumlanmış dil avantajları
 
 ### Rust Versiyonu
+
 1. **Temel Özellikler**:
+
    - Güvenli bellek yönetimi
    - Statik tip sistemi
    - Thread-safe veri yapıları
    - Sıfır maliyetli soyutlamalar
 
 2. **Performans Özellikleri**:
+
    - Paralel işleme desteği (Rayon)
    - Verimli UTF-8 karakter işleme
    - Düşük seviye optimizasyonlar
@@ -110,12 +180,14 @@ fn main() {
 ### Geliştirme Ortamı Kurulumu
 
 1. Repository'yi klonlayın:
+
 ```bash
 git clone <repository-url>
 cd tokenizer
 ```
 
 2. Python ortamını hazırlayın:
+
 ```bash
 python -m venv venv
 source venv/bin/activate  # Unix/macOS
@@ -124,6 +196,7 @@ source venv/bin/activate  # Unix/macOS
 ```
 
 3. Rust toolchain'i kurun:
+
 ```bash
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 # veya
@@ -133,11 +206,13 @@ rustup update
 ### Geliştirme Süreci
 
 1. Yeni bir branch oluşturun:
+
 ```bash
 git checkout -b feature/yeni-ozellik
 ```
 
 2. Testleri çalıştırın:
+
 ```bash
 # Python testleri
 python -m pytest tests/
@@ -147,6 +222,7 @@ cargo test
 ```
 
 3. Kod stilini kontrol edin:
+
 ```bash
 # Python
 flake8 .
@@ -158,6 +234,7 @@ cargo clippy
 ```
 
 4. Değişikliklerinizi commit edin:
+
 ```bash
 git add .
 git commit -m "feat: yeni özellik eklendi"
@@ -166,6 +243,7 @@ git commit -m "feat: yeni özellik eklendi"
 ### Pull Request Süreci
 
 1. Branch'inizi push edin:
+
 ```bash
 git push origin feature/yeni-ozellik
 ```
@@ -178,6 +256,7 @@ git push origin feature/yeni-ozellik
 ### Geliştirme Gereksinimleri
 
 #### Python
+
 - Python 3.6+
 - pytest
 - black
@@ -186,6 +265,7 @@ git push origin feature/yeni-ozellik
 - UTF-8 karakter desteği
 
 #### Rust
+
 - Rust 1.50+
 - Cargo paket yöneticisi
 - rustfmt
