@@ -1,4 +1,5 @@
 import json
+import os
 from enum import Enum
 from typing import Dict, List, Optional, Tuple
 
@@ -12,11 +13,15 @@ class TokenType(Enum):
 
 class TRTokenizer:
     def __init__(self):
-        with open("kokler.json", "r") as f:
+        # Get the directory where this module is located
+        package_dir = os.path.dirname(os.path.abspath(__file__))
+        
+        # Load JSON files from the package directory
+        with open(os.path.join(package_dir, "kokler.json"), "r", encoding="utf-8") as f:
             roots = json.load(f)
-        with open("ekler.json", "r") as f:
+        with open(os.path.join(package_dir, "ekler.json"), "r", encoding="utf-8") as f:
             suffixes = json.load(f)
-        with open("bpe_tokenler.json", "r") as f:
+        with open(os.path.join(package_dir, "bpe_tokenler.json"), "r", encoding="utf-8") as f:
             bpe_tokens = json.load(f)
         self.reverse_dict = {}
 

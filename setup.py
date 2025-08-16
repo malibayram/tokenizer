@@ -15,7 +15,7 @@ def read_readme():
 
 setup(
     name="turkish-tokenizer",
-    version="0.1.6",
+    version="0.1.8",
     description="Turkish tokenizer for Turkish language processing",
     long_description=read_readme(),
     long_description_content_type="text/markdown",

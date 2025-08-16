@@ -27,7 +27,7 @@ pip install -e .
 ### Temel Tokenizer Kullanımı
 
 ```python
-from tr_tokenizer_gemma import TRTokenizer
+from turkish_tokenizer import TRTokenizer
 
 # Tokenizer'ı başlat
 tokenizer = TRTokenizer()
@@ -45,7 +45,7 @@ print("Decoded:", decoded_text)
 ### Gelişmiş Tokenizasyon
 
 ```python
-from tr_tokenizer_gemma import TRTokenizer
+from turkish_tokenizer import TRTokenizer
 
 # Tokenizer'ı başlat
 tokenizer = TRTokenizer()
