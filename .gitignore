@@ -81,3 +81,4 @@ temp/
 turkish_tiktokenizer/temp_tokenizer/
 
 *.pth
+.DS_Store

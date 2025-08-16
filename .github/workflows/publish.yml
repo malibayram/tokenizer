@@ -37,7 +37,7 @@ jobs:
 
       - name: Test import
         run: |
-          python -c "from tr_tokenizer_gemma import TRTokenizer; print('Import successful')"
+          python -c "from turkish_tokenizer import TRTokenizer; print('Import successful')"
 
   build:
     needs: test

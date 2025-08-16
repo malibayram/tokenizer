@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "turkish-tokenizer"
-version = "0.1.0"
+version = "0.1.6"
 description = "Turkish tokenizer for Turkish language processing"
 readme = "README.md"
 license = {text = "MIT"}
@@ -52,10 +52,10 @@ Documentation = "https://github.com/malibayram/tokenizer#readme"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["tr_tokenizer_gemma*"]
+include = ["turkish_tokenizer*"]
 
 [tool.setuptools.package-data]
-tr_tokenizer_gemma = ["*.json"]
+turkish_tokenizer = ["*.json"]
 
 [tool.black]
 line-length = 88

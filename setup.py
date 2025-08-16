@@ -15,16 +15,16 @@ def read_readme():
 
 setup(
     name="turkish-tokenizer",
-    version="0.1.0",
+    version="0.1.6",
     description="Turkish tokenizer for Turkish language processing",
     long_description=read_readme(),
     long_description_content_type="text/markdown",
     author="M. Ali Bayram",
     author_email="malibayram20@gmail.com",
     url="https://github.com/malibayram/tokenizer",
-    packages=find_packages(include=["tr_tokenizer_gemma", "tr_tokenizer_gemma.*"]),
+    packages=find_packages(include=["turkish_tokenizer", "turkish_tokenizer.*"]),
     package_data={
-        "tr_tokenizer_gemma": ["*.json"],
+        "turkish_tokenizer": ["*.json"],
     },
     include_package_data=True,
     install_requires=[

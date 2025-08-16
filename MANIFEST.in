@@ -5,7 +5,7 @@ include README.md
 include LICENSE*
 
 # Include package data files
-include tr_tokenizer_gemma/*.json
+include turkish_tokenizer/*.json
 
 # Include requirements
 include requirements*.txt
@@ -28,6 +28,6 @@ recursive-exclude * .DS_Store
 exclude v09_tr_tokenizer/
 exclude tokenizer_preparation/
 exclude tr_tokenizer/
-exclude turkish_tokenizer/
+
 exclude turkish_tiktokenizer/
 exclude semantic_tokenizer/
