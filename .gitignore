@@ -79,3 +79,5 @@ temp/
 
 # Streamlit app
 turkish_tiktokenizer/temp_tokenizer/
+
+*.pth

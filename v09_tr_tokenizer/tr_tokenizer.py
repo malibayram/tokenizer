@@ -42,9 +42,12 @@ class TRTokenizer:
         self.max_suffix_len = max(len(k) for k in suffixes) if suffixes else 0
         self.max_bpe_len = max(len(k) for k in bpe_tokens) if bpe_tokens else 0
         
-        self.uppercase_marker = {"token": "<uppercase>", "id": 0, "type": TokenType.ROOT}
-        self.unknown_marker = {"token": "<unknown>", "id": 1, "type": TokenType.ROOT}
-        self.space_marker = {"token": " ", "id": 2, "type": TokenType.ROOT}
+        self.uppercase_marker = {"token": "<uppercase>", "id": roots["<uppercase>"], "type": TokenType.ROOT}
+        self.unknown_marker = {"token": "<unknown>", "id": roots["<unknown>"], "type": TokenType.ROOT}
+        self.space_marker = {"token": " ", "id": roots[" "], "type": TokenType.ROOT}
+
+        self.pad_token_id = roots["<pad>"]
+        self.eos_token_id = roots["<eos>"]
 
     def _tokenize_word(self, word: str) -> Tuple[List[dict], List[int]]:
         uppercase_indices = [i for i, c in enumerate(word) if c.isupper()]
