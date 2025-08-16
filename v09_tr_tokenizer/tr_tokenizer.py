@@ -1,10 +1,8 @@
-import argparse
 import json
 from enum import Enum
 from typing import Dict, List, Optional, Tuple
 
 from tr_decoder import TRDecoder
-from tr_gpt_decoder import TRGPTTokenizer
 
 
 class TokenType(Enum):
@@ -14,11 +12,11 @@ class TokenType(Enum):
 
 class TRTokenizer:
     def __init__(self):
-        with open("v09_kokler_new.json", "r") as f:
+        with open("kokler.json", "r") as f:
             roots = json.load(f)
-        with open("v09_ekler.json", "r") as f:
+        with open("ekler.json", "r") as f:
             suffixes = json.load(f)
-        with open("v09_bpe_tokens.json", "r") as f:
+        with open("bpe_tokenler.json", "r") as f:
             bpe_tokens = json.load(f)
         self.reverse_dict = {}
 
@@ -36,7 +34,6 @@ class TRTokenizer:
             self.reverse_dict[value].append(key)
 
         self.decoder = TRDecoder(self.reverse_dict)
-        self.gpt_decoder = TRGPTTokenizer(self.reverse_dict)
 
         self.roots = roots
         self.suffixes = suffixes
@@ -138,28 +135,3 @@ class TRTokenizer:
 
     def decode(self, ids: List[int]) -> str:
         return TRDecoder(self.reverse_dict).decode(ids)
-    
-    def gpt_decode(self, ids: List[int]) -> str:
-        return self.gpt_decoder.decode(ids)
-    
-
-def main(text: str = ""):
-    tokenizer = TRTokenizer()
-    if text == "":
-        text = """
-        Zehra Öney ve Çiçek Çizmeci’yle yapay zekâ konuştuk. Bu sohbeti çektiğimiz tarihte olan o3 artık yok; onun yerine "ChatGPT 5 Thinking" dediğimi varsayın:
-        Bugün Ali, sabah erken saatte İstanbul’un sakin bir köyünün kıyısındaki eski evinin kapısını yavaşça açıp bahçeye çıktı. Kitaptan not aldığı fikrini deftere yazdı ve “Bu projenin aşamaları uç uca eklenecek, sonra rapor olarak tek tek sunulacak,” dedi. Öğleye doğru kulüpte kısa bir toplantı yaptı; şefle ve arkadaşıyla yüz yüze görüşüp gelişecek işleri ayrıntılıca konuştu.
-        Toplantıdan sonra taslağı evde tamamlayacak işleri listeleyecek ve yapacağı deneyleri planlayacaktı; ancak ağaçtan düşen küçücük bir dalcık ayağına değince bahçede kalıp ölçümleri bitirmeyi seçti. Yorgunluğu artınca, “Bu metnin ilk bölümünü kısacık tutayım, sonra uzunca açıklayayım,” diye düşündü.
-        Akşamüstü arabacı komşusunun getirdiği parçalık malzemeyi atölyede denedi; taşçı ustanın önerisiyle küçücük delikleri büyütüp ince ayarlı bir ölçümcük daha ekledi. Nihayet geliyor gibi görünen sonuçlar onu sevindirdi; “Bu verilerin çoğunu yarın yeniden deneyip doğrulayacağım; yapmayıp beklersem geçecek zamanı boşa harcamış olurum,” dedi.
-        """
-    ids = tokenizer.encode(text)
-    print(ids)
-    print(tokenizer.decode(ids))
-    print(tokenizer.gpt_decode(ids))
-
-if __name__ == "__main__":
-    # get args
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--text", "-t", type=str, default="")
-    args = parser.parse_args()
-    main(args.text)
